@@ -24,7 +24,7 @@ func TestNoDeleteFlag(t *testing.T) {
 	}
 	for _, dir := range []planner.Direction{planner.DirectionPull, planner.DirectionPush} {
 		for _, itemize := range []bool{true, false} {
-			args := BuildArgs(dir, testCfg(), itemize)
+			args := BuildArgs(dir, testCfg(), itemize, false)
 			joined := strings.Join(args, " ")
 			for _, f := range forbidden {
 				for _, a := range args {
@@ -37,8 +37,24 @@ func TestNoDeleteFlag(t *testing.T) {
 	}
 }
 
+func TestDeleteFlag(t *testing.T) {
+	for _, dir := range []planner.Direction{planner.DirectionPull, planner.DirectionPush} {
+		args := BuildArgs(dir, testCfg(), false, true)
+		hasDelete := false
+		for _, a := range args {
+			if a == "--delete" {
+				hasDelete = true
+				break
+			}
+		}
+		if !hasDelete {
+			t.Fatalf("expected --delete flag, got %v", args)
+		}
+	}
+}
+
 func TestBuildArgsTrailingSlashes(t *testing.T) {
-	args := BuildArgs(planner.DirectionPull, testCfg(), false)
+	args := BuildArgs(planner.DirectionPull, testCfg(), false, false)
 	src, dst := args[len(args)-2], args[len(args)-1]
 	if !strings.HasSuffix(src, "/") || !strings.HasSuffix(dst, "/") {
 		t.Fatalf("expected trailing slashes on both endpoints, got %q %q", src, dst)
@@ -52,7 +68,7 @@ func TestBuildArgsTrailingSlashes(t *testing.T) {
 }
 
 func TestBuildArgsPushReversed(t *testing.T) {
-	args := BuildArgs(planner.DirectionPush, testCfg(), false)
+	args := BuildArgs(planner.DirectionPush, testCfg(), false, false)
 	src, dst := args[len(args)-2], args[len(args)-1]
 	if src != "/home/me/Pictures/" || dst != "user@dgx:/photos/" {
 		t.Fatalf("push endpoints wrong: %q -> %q", src, dst)
@@ -60,7 +76,7 @@ func TestBuildArgsPushReversed(t *testing.T) {
 }
 
 func TestBuildArgsExcludesQsync(t *testing.T) {
-	args := BuildArgs(planner.DirectionPull, testCfg(), false)
+	args := BuildArgs(planner.DirectionPull, testCfg(), false, false)
 	found := false
 	for _, a := range args {
 		if a == "--exclude=.qsync/***" {
@@ -76,7 +92,7 @@ func TestBuildArgsPortAndBwlimit(t *testing.T) {
 	cfg := testCfg()
 	cfg.Transport.Port = 2222
 	cfg.Rsync.BandwidthLimitKB = 1000
-	args := BuildArgs(planner.DirectionPull, cfg, false)
+	args := BuildArgs(planner.DirectionPull, cfg, false, false)
 	joined := strings.Join(args, " ")
 	if !strings.Contains(joined, "ssh -p 2222") {
 		t.Errorf("missing port in -e arg: %s", joined)

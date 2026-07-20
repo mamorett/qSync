@@ -145,13 +145,13 @@ Examples:
 	"pull": `qsync pull — download remote library changes locally
 
 Usage:
-  qsync pull [--apply] [--wait-lock DUR] [--all] [--json]
+  qsync pull [--apply] [--wait-lock DUR] [--all] [--json] [--delete]
 
 Description:
   Downloads new and modified files from the remote source library.
   By default, it runs in dry-run mode. Pass --apply to perform actual transfers.
   Safety:
-    - Never deletes local files. Local files deleted remote are kept.
+    - By default, never deletes local files. Local files deleted remote are kept unless --delete is specified.
     - Aborts immediately if conflicts exist.
 
 Flags:
@@ -159,6 +159,7 @@ Flags:
   --wait-lock D   Wait up to duration D (e.g. 5m) for active lock to release
   --all           Force full scanning (no optimization)
   --json          Output JSON details of the dry-run/apply operation
+  --delete        Delete local files that are no longer present on the remote
 
 Exit codes:
   0  Success (when --apply is used and succeeds)
@@ -174,21 +175,22 @@ Examples:
 	"push": `qsync push — upload local library changes to the remote source
 
 Usage:
-  qsync push [--apply] [--wait-lock DUR] [--all] [--json]
+  qsync push [--apply] [--wait-lock DUR] [--all] [--json] [--delete]
 
 Description:
   Uploads new and modified files from the local target to the remote host.
   By default, it runs in dry-run mode. Pass --apply to execute transfers.
   Safety:
     - Aborts if the remote has newer updates (run pull first).
-    - Deletions are staged to pending-deletions.json and not deleted
-      immediately on remote. Use 'qsync purge' to apply deletions.
+    - By default, deletions are staged to pending-deletions.json and not deleted
+      immediately on remote. Pass --delete to delete remote files immediately.
 
 Flags:
   --apply         Execute files transfer (default is dry-run)
   --wait-lock D   Wait up to duration D (e.g. 10s) for active lock
   --all           Force full scanning
   --json          Output JSON details of the push operation
+  --delete        Delete remote files that are no longer present locally
 
 Exit codes:
   0  Success (when --apply is used and succeeds)

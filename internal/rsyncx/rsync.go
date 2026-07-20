@@ -18,8 +18,8 @@ const itemizeFormat = "%n|%i|%b|%l"
 // BuildArgs constructs the rsync argument vector (without the leading binary
 // path) for the given direction. The order is deterministic.
 //
-// SAFETY: this function never emits any --delete* flag. See TestNoDeleteFlag.
-func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool) []string {
+// SAFETY: this function never emits any --delete* flag unless deleteMode is true.
+func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool, deleteMode bool) []string {
 	args := []string{
 		"-avz",
 		"--numeric-ids",
@@ -29,6 +29,10 @@ func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool) []
 
 	if itemize {
 		args = append(args, "--out-format="+itemizeFormat)
+	}
+
+	if deleteMode {
+		args = append(args, "--delete")
 	}
 
 	// Always exclude our own state directory.

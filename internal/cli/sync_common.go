@@ -24,6 +24,7 @@ type syncOptions struct {
 	apply     bool
 	all       bool
 	waitLock  time.Duration
+	delete    bool
 }
 
 // runSync executes the shared pull/push flow.
@@ -107,7 +108,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		}
 	}
 
-	argv := rsyncx.BuildArgs(opts.direction, cfg, true)
+	argv := rsyncx.BuildArgs(opts.direction, cfg, true, opts.delete)
 	binary := rsyncx.Binary(cfg)
 
 	// Dry-run path.
@@ -201,8 +202,8 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		return exitcode.GenericError, fmt.Errorf("save synced manifest: %w", err)
 	}
 
-	// Push: stage deletions for purge.
-	if opts.direction == planner.DirectionPush {
+	// Push: stage deletions for purge (only if not already deleted by rsync).
+	if opts.direction == planner.DirectionPush && !opts.delete {
 		if err := stageDeletions(cfg, plan); err != nil {
 			return exitcode.GenericError, err
 		}
@@ -218,7 +219,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 			fmt.Fprintf(e.stderr, "warning: %s\n", w)
 		}
 		fmt.Fprintf(e.stdout, "%s complete: %d files changed.\n", opname, filesChanged)
-		if opts.direction == planner.DirectionPush && plan.Stats.Deletions > 0 {
+		if opts.direction == planner.DirectionPush && plan.Stats.Deletions > 0 && !opts.delete {
 			fmt.Fprintf(e.stdout, "%d deletions staged; run 'qsync purge' to execute them on %s.\n",
 				plan.Stats.Deletions, cfg.Source.Host)
 		}
