@@ -96,12 +96,35 @@ func Run(args []string, stdout, stderr io.Writer) exitcode.ExitCode {
 		return exitcode.GenericError
 	}
 
+	if shouldPrintLogo(args) {
+		printLogo(stdout)
+	}
+
 	e := &env{stdout: stdout, stderr: stderr, args: args[1:]}
 	code, err := cmd.run(e)
 	if err != nil {
 		return classify(e, cmd, code, err)
 	}
 	return code
+}
+
+func shouldPrintLogo(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+	first := args[0]
+	if first == "help" || first == "-h" || first == "--help" || first == "version" || first == "-v" || first == "--version" {
+		return false
+	}
+	if first == "scan" {
+		return false
+	}
+	for _, arg := range args {
+		if arg == "--json" || arg == "--quiet" || arg == "-q" || arg == "-h" || arg == "--help" {
+			return false
+		}
+	}
+	return true
 }
 
 // classify maps sentinel errors to exit codes.
@@ -163,12 +186,7 @@ func versionString() string {
 
 // printTopUsage renders top-level help with grouped commands.
 func printTopUsage(w io.Writer) {
-	fmt.Fprintln(w, `  ____  ____                  `)
-	fmt.Fprintln(w, ` / __ `+"`"+`/ ___| _   _ _ __   ___ `)
-	fmt.Fprintln(w, `/ /_/ /\___ \| | | | '_ \ / __|`)
-	fmt.Fprintln(w, `\__, /|____/ \__, |_| |_|\___|`)
-	fmt.Fprintln(w, `/____/        |___/           `)
-	fmt.Fprintln(w)
+	printLogo(w)
 	fmt.Fprintln(w, "qSync — safe, deterministic photo library sync (rsync/ssh wrapper)")
 	fmt.Fprintln(w, "====================================================================")
 	fmt.Fprintln(w, "A safe unidirectional sync client ensuring safety first: no automatic deletions,")

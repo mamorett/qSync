@@ -4,15 +4,6 @@
   <img src="logo.png" alt="qSync logo" width="240">
 </p>
 
-```
-  ____  ____                  
- / __ `/ ___| _   _ _ __   ___ 
-/ /_/ /\___ \| | | | '_ \ / __|
-\__, /|____/ \__, |_| |_|\___|
-/____/        |___/           
-```
-
-
 A safe, deterministic unidirectional synchronization tool for file libraries (such as photos, documents, and media archives) built on `rsync` over SSH.
 
 ---
