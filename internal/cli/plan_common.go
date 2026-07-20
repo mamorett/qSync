@@ -3,11 +3,11 @@ package cli
 import (
 	"fmt"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/conflict"
-	"github.com/yourorg/photolib/internal/planner"
-	"github.com/yourorg/photolib/internal/rsyncx"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/conflict"
+	"github.com/yourorg/qsync/internal/planner"
+	"github.com/yourorg/qsync/internal/rsyncx"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // buildContext holds the manifests gathered for planning.

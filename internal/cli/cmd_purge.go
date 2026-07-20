@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourorg/photolib/internal/audit"
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/exitcode"
-	"github.com/yourorg/photolib/internal/output"
-	"github.com/yourorg/photolib/internal/purge"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/audit"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/yourorg/qsync/internal/output"
+	"github.com/yourorg/qsync/internal/purge"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // stdinReader is overridable in tests.

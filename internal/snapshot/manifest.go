@@ -48,7 +48,7 @@ type Manifest struct {
 
 // header is the first JSONL line of a manifest file.
 type header struct {
-	Schema    int    `json:"photolib-manifest"`
+	Schema    int    `json:"qsync-manifest"`
 	Generated string `json:"generated"`
 	Host      string `json:"host"`
 	Root      string `json:"root"`

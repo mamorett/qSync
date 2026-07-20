@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/yourorg/photolib/internal/exitcode"
-	"github.com/yourorg/photolib/internal/output"
-	"github.com/yourorg/photolib/internal/planner"
+	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/yourorg/qsync/internal/output"
+	"github.com/yourorg/qsync/internal/planner"
 )
 
 // envelope is the standard JSON document for every command.
 type envelope struct {
-	Photolib int         `json:"photolib"`
+	Photolib int         `json:"qsync"`
 	Command  string      `json:"command"`
 	OK       bool        `json:"ok"`
 	ExitCode int         `json:"exit_code"`

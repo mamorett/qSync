@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/exitcode"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/exitcode"
 )
 
 // Version is set at build time via -ldflags "-X ...cli.Version=...".
@@ -158,18 +158,29 @@ func (e *env) verbosef(format string, a ...any) {
 }
 
 func versionString() string {
-	return fmt.Sprintf("photolib %s (%s)", Version, goPlatform())
+	return fmt.Sprintf("qsync %s (%s)", Version, goPlatform())
 }
 
 // printTopUsage renders top-level help with grouped commands.
 func printTopUsage(w io.Writer) {
-	fmt.Fprintln(w, "photolib — safe, deterministic photo library sync (rsync/ssh wrapper)")
+	fmt.Fprintln(w, `  ____  ____                  `)
+	fmt.Fprintln(w, ` / __ `+"`"+`/ ___| _   _ _ __   ___ `)
+	fmt.Fprintln(w, `/ /_/ /\___ \| | | | '_ \ / __|`)
+	fmt.Fprintln(w, `\__, /|____/ \__, |_| |_|\___|`)
+	fmt.Fprintln(w, `/____/        |___/           `)
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Usage: photolib <command> [flags]")
+	fmt.Fprintln(w, "qSync — safe, deterministic photo library sync (rsync/ssh wrapper)")
+	fmt.Fprintln(w, "====================================================================")
+	fmt.Fprintln(w, "A safe unidirectional sync client ensuring safety first: no automatic deletions,")
+	fmt.Fprintln(w, "interactive confirmation for remote purges, locking, and 3-way conflict checking.")
 	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  qsync <command> [flags]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Commands:")
 	groups := []string{"Setup", "Inspect", "Sync"}
 	for _, grp := range groups {
-		fmt.Fprintf(w, "%s:\n", grp)
+		fmt.Fprintf(w, "  %s:\n", grp)
 		var names []string
 		for n, c := range commands {
 			if c.group == grp && !c.hidden {
@@ -178,16 +189,44 @@ func printTopUsage(w io.Writer) {
 		}
 		sort.Strings(names)
 		for _, n := range names {
-			fmt.Fprintf(w, "  %-9s %s\n", n, commands[n].summary)
+			fmt.Fprintf(w, "    %-9s %s\n", n, commands[n].summary)
 		}
 		fmt.Fprintln(w)
 	}
-	fmt.Fprintln(w, "Other:")
-	fmt.Fprintln(w, "  version   print version")
-	fmt.Fprintln(w, "  help      show help for a command")
+	fmt.Fprintln(w, "  Other:")
+	fmt.Fprintln(w, "    version   print version information")
+	fmt.Fprintln(w, "    help      show detailed help for any command")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Exit codes: 0 ok, 1 error, 2 conflicts, 3 lock held, 4 verify failed, 5 pending changes.")
-	fmt.Fprintln(w, "Dry-run is the default for pull/push; pass --apply to mutate.")
+	fmt.Fprintln(w, "Global Flags:")
+	fmt.Fprintln(w, "  --config PATH      Path to config file (default: ~/.config/qsync/config.yaml)")
+	fmt.Fprintln(w, "  -v, --verbose      Print diagnostic information on stderr")
+	fmt.Fprintln(w, "  -q, --quiet        Suppress non-error output")
+	fmt.Fprintln(w, "  --json             Render machine-readable JSON output")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Standard Workflow:")
+	fmt.Fprintln(w, "  1. Initial setup:  qsync init --host user@remote --source-path /remote/dir --target-path ~/local/dir")
+	fmt.Fprintln(w, "  2. Health check:   qsync doctor")
+	fmt.Fprintln(w, "  3. Dry-run pull:   qsync pull")
+	fmt.Fprintln(w, "  4. Apply pull:     qsync pull --apply")
+	fmt.Fprintln(w, "  5. Local work:     (edit, rename, or delete files inside your target directory)")
+	fmt.Fprintln(w, "  6. Plan push:      qsync plan --direction push")
+	fmt.Fprintln(w, "  7. Apply push:     qsync push --apply")
+	fmt.Fprintln(w, "  8. Purge remote:   qsync purge")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Safety Features:")
+	fmt.Fprintln(w, "  - Dry-run by default: pull and push require --apply to actually modify anything.")
+	fmt.Fprintln(w, "  - Advisory locking:   Only one mutating sync process can run on a target folder at a time.")
+	fmt.Fprintln(w, "  - Conflict safety:    If both local and remote have diverged, qsync halts until resolved.")
+	fmt.Fprintln(w, "  - Staged deletions:   Deleting local files stages them. They are only removed from the remote")
+	fmt.Fprintln(w, "                        when you run `qsync purge` and enter confirmation.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Exit Codes:")
+	fmt.Fprintln(w, "  0  Success / Clean (nothing pending)")
+	fmt.Fprintln(w, "  1  Generic error / Usage error")
+	fmt.Fprintln(w, "  2  Divergent conflicts detected")
+	fmt.Fprintln(w, "  3  Advisory sync lock is held by another process")
+	fmt.Fprintln(w, "  4  Integrity verification mismatch (verify command)")
+	fmt.Fprintln(w, "  5  Dry-run check shows changes are pending")
 }
 
 func runHelp(args []string, stdout, stderr io.Writer) exitcode.ExitCode {

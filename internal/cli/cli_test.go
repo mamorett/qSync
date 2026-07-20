@@ -12,15 +12,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourorg/photolib/internal/exitcode"
+	"github.com/yourorg/qsync/internal/exitcode"
 )
 
-// buildTestBinary compiles the photolib binary once for integration tests that
-// need a real `photolib scan` over the fake-ssh harness.
+// buildTestBinary compiles the qsync binary once for integration tests that
+// need a real `qsync scan` over the fake-ssh harness.
 func buildTestBinary(t *testing.T) string {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "photolib")
-	cmd := exec.Command("go", "build", "-o", bin, "github.com/yourorg/photolib/cmd/photolib")
+	bin := filepath.Join(t.TempDir(), "qsync")
+	cmd := exec.Command("go", "build", "-o", bin, "github.com/yourorg/qsync/cmd/qsync")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build test binary: %v\n%s", err, out)
@@ -36,8 +36,8 @@ func writeFakeSSH(t *testing.T, dir, bin, remoteRoot string) string {
 	script := fmt.Sprintf(`#!/bin/bash
 host="$1"; shift
 cmd="$*"
-if echo "$cmd" | grep -q "photolib scan"; then
-  PHOTOLIB_FAKE_ROOT=%q %q scan --root /ignored
+if echo "$cmd" | grep -q "qsync scan"; then
+  QSYNC_FAKE_ROOT=%q %q scan --root /ignored
   exit 0
 fi
 if [ "$1" = "rsync" ]; then exec "$@"; fi
@@ -106,7 +106,7 @@ func TestRun_UnknownCommand(t *testing.T) {
 
 func TestRun_Version(t *testing.T) {
 	code, out, _ := run("version")
-	if code != exitcode.Success || !strings.Contains(out, "photolib") {
+	if code != exitcode.Success || !strings.Contains(out, "qsync") {
 		t.Fatalf("version bad: code=%d out=%q", code, out)
 	}
 }
@@ -153,7 +153,7 @@ func TestPullDryRunLeavesTreeUnchanged(t *testing.T) {
 		t.Fatalf("dry-run pull exit = %d, want 5\n%s", code, errb)
 	}
 	after := treeHash(t, local)
-	// Only .photolib state may change; library content must be identical.
+	// Only .qsync state may change; library content must be identical.
 	if before != after {
 		t.Fatal("dry-run pull modified the library tree")
 	}
@@ -181,17 +181,17 @@ func TestPullApplyTransfersFiles(t *testing.T) {
 		t.Errorf("a.jpg not transferred: %v", err)
 	}
 	// Synced manifest + audit file written.
-	if _, err := os.Stat(filepath.Join(local, ".photolib/state/synced.manifest.jsonl")); err != nil {
+	if _, err := os.Stat(filepath.Join(local, ".qsync/state/synced.manifest.jsonl")); err != nil {
 		t.Errorf("synced manifest missing: %v", err)
 	}
-	hist, _ := filepath.Glob(filepath.Join(local, ".photolib/history/*-pull.jsonl"))
+	hist, _ := filepath.Glob(filepath.Join(local, ".qsync/history/*-pull.jsonl"))
 	if len(hist) == 0 {
 		t.Error("no audit file written")
 	}
 }
 
 // treeHash computes a recursive content hash of a directory tree EXCLUDING the
-// .photolib state directory.
+// .qsync state directory.
 func treeHash(t *testing.T, root string) string {
 	t.Helper()
 	h := sha256.New()
@@ -200,7 +200,7 @@ func treeHash(t *testing.T, root string) string {
 			return nil
 		}
 		rel, _ := filepath.Rel(root, p)
-		if rel == ".photolib" {
+		if rel == ".qsync" {
 			return fs.SkipDir
 		}
 		if d.IsDir() {

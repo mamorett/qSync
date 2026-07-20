@@ -87,7 +87,7 @@ func NewJSONEmitter(w io.Writer) *JSONEmitter {
 
 func (je *JSONEmitter) EmitEnvelope(cmd string, ok bool, exitCode int, warnings []string, data any) error {
 	result := map[string]any{
-		"photolib":     1,
+		"qsync":        1,
 		"command":      cmd,
 		"ok":           ok,
 		"exit_code":    exitCode,
@@ -113,7 +113,7 @@ func (JSONEmitter) IsJSONOutputEnabled() bool {
 // WriteErrorJSON formats an error response
 func (je *JSONEmitter) WriteError(cmd string, exitCode int, msg string, details any) error {
 	result := map[string]any{
-		"photolib":  1,
+		"qsync":     1,
 		"command":   cmd,
 		"ok":        false,
 		"exit_code": exitCode,

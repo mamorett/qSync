@@ -131,7 +131,7 @@ func TestDiscoverConfigPath(t *testing.T) {
 	if got := DiscoverConfigPath("/explicit"); got != "/explicit" {
 		t.Errorf("flag should win, got %s", got)
 	}
-	t.Setenv("PHOTOLIB_CONFIG", "/from/env")
+	t.Setenv("QSYNC_CONFIG", "/from/env")
 	if got := DiscoverConfigPath(""); got != "/from/env" {
 		t.Errorf("env should win when no flag, got %s", got)
 	}

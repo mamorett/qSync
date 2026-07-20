@@ -6,11 +6,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
-// fetchRemoteManifest runs `ssh <host> photolib scan --root <path>` and parses
+// fetchRemoteManifest runs `ssh <host> qsync scan --root <path>` and parses
 // the JSONL manifest from stdout. With checksum=true it requests hashes.
 func fetchRemoteManifest(cfg *config.Config, checksum bool) (*snapshot.Manifest, error) {
 	sshBin := cfg.Transport.SSH
@@ -21,7 +21,7 @@ func fetchRemoteManifest(cfg *config.Config, checksum bool) (*snapshot.Manifest,
 	if cfg.Transport.Port != 0 {
 		args = append(args, "-p", fmt.Sprintf("%d", cfg.Transport.Port))
 	}
-	remoteCmd := "photolib scan --root " + shellArg(cfg.Source.Path)
+	remoteCmd := "qsync scan --root " + shellArg(cfg.Source.Path)
 	if checksum {
 		remoteCmd += " --checksum"
 	}
@@ -34,7 +34,7 @@ func fetchRemoteManifest(cfg *config.Config, checksum bool) (*snapshot.Manifest,
 	if err := cmd.Run(); err != nil {
 		msg := strings.TrimSpace(stderr.String())
 		if strings.Contains(msg, "not found") || strings.Contains(msg, "command not found") {
-			return nil, fmt.Errorf("photolib binary not found on %s; install it there first (see README \"Remote Setup\")", cfg.Source.Host)
+			return nil, fmt.Errorf("qsync binary not found on %s; install it there first (see README \"Remote Setup\")", cfg.Source.Host)
 		}
 		if msg != "" {
 			return nil, fmt.Errorf("remote scan failed: %s", firstLine(msg))

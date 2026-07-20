@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // statePaths returns the manifest file paths for a target library root.
@@ -16,7 +16,7 @@ type statePaths struct {
 }
 
 func stateFor(targetPath string) statePaths {
-	dir := filepath.Join(targetPath, ".photolib", "state")
+	dir := filepath.Join(targetPath, ".qsync", "state")
 	return statePaths{
 		dir:    dir,
 		local:  filepath.Join(dir, "local.manifest.jsonl"),

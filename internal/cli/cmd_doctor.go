@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/doctor"
-	"github.com/yourorg/photolib/internal/exitcode"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/doctor"
+	"github.com/yourorg/qsync/internal/exitcode"
 )
 
 func cmdDoctor(e *env) (exitcode.ExitCode, error) {

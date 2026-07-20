@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 func mf(entries ...snapshot.Entry) *snapshot.Manifest {

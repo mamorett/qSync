@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/planner"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/planner"
 )
 
 func testCfg() *config.Config {
@@ -59,16 +59,16 @@ func TestBuildArgsPushReversed(t *testing.T) {
 	}
 }
 
-func TestBuildArgsExcludesPhotolib(t *testing.T) {
+func TestBuildArgsExcludesQsync(t *testing.T) {
 	args := BuildArgs(planner.DirectionPull, testCfg(), false)
 	found := false
 	for _, a := range args {
-		if a == "--exclude=.photolib/***" {
+		if a == "--exclude=.qsync/***" {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatal("expected --exclude=.photolib/***")
+		t.Fatal("expected --exclude=.qsync/***")
 	}
 }
 

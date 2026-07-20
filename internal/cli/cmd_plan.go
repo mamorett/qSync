@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/yourorg/photolib/internal/exitcode"
-	"github.com/yourorg/photolib/internal/lock"
-	"github.com/yourorg/photolib/internal/planner"
+	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/yourorg/qsync/internal/lock"
+	"github.com/yourorg/qsync/internal/planner"
 )
 
 func cmdPlan(e *env) (exitcode.ExitCode, error) {

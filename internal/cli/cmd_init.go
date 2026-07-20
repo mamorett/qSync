@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/exitcode"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/exitcode"
 )
 
 func cmdInit(e *env) (exitcode.ExitCode, error) {
@@ -78,7 +78,7 @@ func cmdInit(e *env) (exitcode.ExitCode, error) {
 
 func makeStateDirs(target string) error {
 	for _, sub := range []string{"state", "history", "tmp"} {
-		if err := os.MkdirAll(filepath.Join(target, ".photolib", sub), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(target, ".qsync", sub), 0755); err != nil {
 			return fmt.Errorf("create %s: %w", sub, err)
 		}
 	}

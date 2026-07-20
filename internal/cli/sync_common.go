@@ -8,14 +8,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yourorg/photolib/internal/audit"
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/exitcode"
-	"github.com/yourorg/photolib/internal/lock"
-	"github.com/yourorg/photolib/internal/planner"
-	"github.com/yourorg/photolib/internal/purge"
-	"github.com/yourorg/photolib/internal/rsyncx"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/audit"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/yourorg/qsync/internal/lock"
+	"github.com/yourorg/qsync/internal/planner"
+	"github.com/yourorg/qsync/internal/purge"
+	"github.com/yourorg/qsync/internal/rsyncx"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // syncOptions configure a pull/push run.
@@ -97,7 +97,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 	// Push Safety Rule 4: refuse if the DGX has newer changes the local lacks.
 	if opts.direction == planner.DirectionPush {
 		if violated := remoteHasNewerChanges(bc); violated {
-			msg := "DGX has newer changes; run photolib pull first"
+			msg := "DGX has newer changes; run qsync pull first"
 			writeAuditSummary(aw, opname, opts.apply, plan, 0, "conflicts", start)
 			if g.json {
 				return exitcode.Conflicts, emitJSON(e.stdout, opname, exitcode.Conflicts, nil, plan, msg, nil)
@@ -219,7 +219,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		}
 		fmt.Fprintf(e.stdout, "%s complete: %d files changed.\n", opname, filesChanged)
 		if opts.direction == planner.DirectionPush && plan.Stats.Deletions > 0 {
-			fmt.Fprintf(e.stdout, "%d deletions staged; run 'photolib purge' to execute them on %s.\n",
+			fmt.Fprintf(e.stdout, "%d deletions staged; run 'qsync purge' to execute them on %s.\n",
 				plan.Stats.Deletions, cfg.Source.Host)
 		}
 	}

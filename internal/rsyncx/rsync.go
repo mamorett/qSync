@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/planner"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/planner"
 )
 
 // itemizeFormat is the --out-format used when itemizing changes.
@@ -32,7 +32,7 @@ func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool) []
 	}
 
 	// Always exclude our own state directory.
-	args = append(args, "--exclude=.photolib/***")
+	args = append(args, "--exclude=.qsync/***")
 	for _, pat := range cfg.Ignore {
 		args = append(args, "--exclude="+pat)
 	}

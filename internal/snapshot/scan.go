@@ -32,7 +32,7 @@ var nowFunc = time.Now
 // hostnameFunc is overridable in tests.
 var hostnameFunc = os.Hostname
 
-// Scan walks root and builds a manifest. The .photolib directory at the root is
+// Scan walks root and builds a manifest. The .qsync directory at the root is
 // skipped. Entries matching any ignore pattern are skipped. Per-file errors are
 // collected rather than aborting the whole scan.
 func Scan(root string, ignore []string) (*ScanResult, error) {
@@ -70,8 +70,8 @@ func Scan(root string, ignore []string) (*ScanResult, error) {
 
 		rel := relSlash(root, p)
 
-		// Skip the .photolib state dir at the root entirely.
-		if rel == ".photolib" {
+		// Skip the .qsync state dir at the root entirely.
+		if rel == ".qsync" {
 			return fs.SkipDir
 		}
 

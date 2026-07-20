@@ -33,13 +33,13 @@ func writeTree(t *testing.T, root string, files map[string]string) {
 	}
 }
 
-func TestScan_BasicAndSkipPhotolib(t *testing.T) {
+func TestScan_BasicAndSkipQsync(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{
-		"2024/05/a.jpg":     "hello",
-		"2024/05/b.jpg":     "world",
-		".photolib/state/x": "state",
-		"link":              "@symlink:2024/05/a.jpg",
+		"2024/05/a.jpg":  "hello",
+		"2024/05/b.jpg":  "world",
+		".qsync/state/x": "state",
+		"link":           "@symlink:2024/05/a.jpg",
 	})
 	res, err := Scan(root, nil)
 	if err != nil {
@@ -49,8 +49,8 @@ func TestScan_BasicAndSkipPhotolib(t *testing.T) {
 	if _, ok := m.Entries["2024/05/a.jpg"]; !ok {
 		t.Error("missing a.jpg")
 	}
-	if _, ok := m.Entries[".photolib/state/x"]; ok {
-		t.Error(".photolib should be skipped")
+	if _, ok := m.Entries[".qsync/state/x"]; ok {
+		t.Error(".qsync should be skipped")
 	}
 	if e, ok := m.Entries["link"]; !ok || e.Type != TypeSymlink {
 		t.Errorf("symlink not recorded properly: %+v", e)

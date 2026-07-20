@@ -8,16 +8,16 @@ GOARCH ?= $(shell go env GOARCH)
 
 # Build the binary
 build:
-	@echo "Building photolib version $(VERSION)"
+	@echo "Building qsync version $(VERSION)"
 	@mkdir -p bin
-	CGO_ENABLED=0 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o bin/photolib ./cmd/photolib
-	@echo "Binary created: bin/photolib"
+	CGO_ENABLED=0 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o bin/qsync ./cmd/qsync
+	@echo "Binary created: bin/qsync"
 
 # Install to GOPATH
 install:
-	@echo "Installing photolib version $(VERSION)"
-	CGO_ENABLED=0 go install $(GOFLAGS) -ldflags="$(LDFLAGS)" ./cmd/photolib
-	@echo "Installed to $(shell go env GOPATH)/bin/photolib"
+	@echo "Installing qsync version $(VERSION)"
+	CGO_ENABLED=0 go install $(GOFLAGS) -ldflags="$(LDFLAGS)" ./cmd/qsync
+	@echo "Installed to $(shell go env GOPATH)/bin/qsync"
 
 # Run tests with race detector
 .PHONY: test
@@ -55,16 +55,16 @@ release:
 	for os in linux darwin; do \
 		for arch in amd64 arm64; do \
 			GOOS=$$os GOARCH=$$arch $(MAKE) build version GOOS=$$os GOARCH=$$arch; \
-			mv bin/photolib dist/photolib-$$os-$$arch || exit 1; \
+			mv bin/qsync dist/qsync-$$os-$$arch || exit 1; \
 			done \
 		done
 	@echo "Release binaries created in dist/ directory"
 	@echo "Generating checksums..."
-	cd dist && sha256sum photolib-* > photolib-checksums.txt
+	cd dist && sha256sum qsync-* > qsync-checksums.txt
 
 # Build with version output only
 version-bin:
-	@echo "photolib $(VERSION)"
+	@echo "qsync $(VERSION)"
 
 # Clean build artifacts
 .PHONY: clean

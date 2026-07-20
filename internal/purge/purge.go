@@ -25,7 +25,7 @@ type PendingSet struct {
 
 // PendingPath returns the path of the pending-deletions file for a target.
 func PendingPath(targetPath string) string {
-	return filepath.Join(targetPath, ".photolib", "state", "pending-deletions.json")
+	return filepath.Join(targetPath, ".qsync", "state", "pending-deletions.json")
 }
 
 // LoadPending reads the pending-deletions file. Returns an empty set (not an

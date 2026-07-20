@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/exitcode"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // cmdScan is a hidden subcommand: scans a root and writes a JSONL manifest to
@@ -26,7 +26,7 @@ func cmdScan(e *env) (exitcode.ExitCode, error) {
 	}
 
 	// Integration-test hook: override root via env.
-	if fake := os.Getenv("PHOTOLIB_FAKE_ROOT"); fake != "" {
+	if fake := os.Getenv("QSYNC_FAKE_ROOT"); fake != "" {
 		root = fake
 	}
 	if root == "" {

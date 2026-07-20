@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/yourorg/photolib/internal/config"
-	"github.com/yourorg/photolib/internal/lock"
+	"github.com/yourorg/qsync/internal/config"
+	"github.com/yourorg/qsync/internal/lock"
 )
 
 // doctorMinFreeBytes is the free-space warning threshold (10 GiB).
@@ -102,11 +102,11 @@ func Run(cfgPath string, cfg *config.Config, cfgErr error) *Report {
 			add("remote-source", true, false, cfg.Source.Path)
 		}
 
-		// 11. Remote photolib binary.
-		if err := runErr(sshBin, cfg.Source.Host, "command", "-v", "photolib"); err != nil {
-			add("remote-photolib", false, true, "photolib not found on "+cfg.Source.Host+"; see README Remote Setup")
+		// 11. Remote qsync binary.
+		if err := runErr(sshBin, cfg.Source.Host, "command", "-v", "qsync"); err != nil {
+			add("remote-qsync", false, true, "qsync not found on "+cfg.Source.Host+"; see README Remote Setup")
 		} else {
-			add("remote-photolib", true, false, "present on "+cfg.Source.Host)
+			add("remote-qsync", true, false, "present on "+cfg.Source.Host)
 		}
 	}
 
@@ -216,16 +216,16 @@ func isWritable(dir string) bool {
 }
 
 func probeWritable(dir string) error {
-	tmpDir := filepath.Join(dir, ".photolib", "tmp")
-	// Only create tmp under an existing target's .photolib; use dir itself if
-	// .photolib doesn't exist yet.
+	tmpDir := filepath.Join(dir, ".qsync", "tmp")
+	// Only create tmp under an existing target's .qsync; use dir itself if
+	// .qsync doesn't exist yet.
 	base := dir
-	if fi, err := os.Stat(filepath.Join(dir, ".photolib")); err == nil && fi.IsDir() {
+	if fi, err := os.Stat(filepath.Join(dir, ".qsync")); err == nil && fi.IsDir() {
 		if err := os.MkdirAll(tmpDir, 0755); err == nil {
 			base = tmpDir
 		}
 	}
-	f, err := os.CreateTemp(base, ".photolib-doctor-*")
+	f, err := os.CreateTemp(base, ".qsync-doctor-*")
 	if err != nil {
 		return fmt.Errorf("not writable: %s", base)
 	}

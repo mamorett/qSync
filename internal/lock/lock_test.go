@@ -72,7 +72,7 @@ func TestIsLocked(t *testing.T) {
 func TestReleaseAfterTakeoverStale(t *testing.T) {
 	dir := t.TempDir()
 	// Write a lock file with a dead PID but do not hold flock.
-	os.MkdirAll(filepath.Join(dir, ".photolib"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".qsync"), 0755)
 	os.WriteFile(LockPath(dir), []byte(`{"pid":999999,"operation":"pull"}`), 0644)
 	// Should be able to acquire (stale takeover or fresh flock).
 	lk, err := Acquire(dir, "push")

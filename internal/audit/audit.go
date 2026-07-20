@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/yourorg/photolib/internal/planner"
+	"github.com/yourorg/qsync/internal/planner"
 )
 
 // Record is one audit entry. A run writes one summary record followed by
@@ -39,10 +39,10 @@ type Writer struct {
 
 // HistoryDir returns the history directory for a target path.
 func HistoryDir(targetPath string) string {
-	return filepath.Join(targetPath, ".photolib", "history")
+	return filepath.Join(targetPath, ".qsync", "history")
 }
 
-// NewWriter creates a new audit file <target>/.photolib/history/YYYYMMDD-HHMMSS-<op>.jsonl.
+// NewWriter creates a new audit file <target>/.qsync/history/YYYYMMDD-HHMMSS-<op>.jsonl.
 // Filenames use UTC.
 func NewWriter(targetPath, operation string, when time.Time) (*Writer, error) {
 	dir := HistoryDir(targetPath)

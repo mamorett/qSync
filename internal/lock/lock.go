@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// LockFileName is the lock file name inside .photolib.
+// LockFileName is the lock file name inside .qsync.
 const LockFileName = "sync.lock"
 
 // Info is the JSON payload written into the lock file.
@@ -53,7 +53,7 @@ type Lock struct {
 
 // LockPath returns the lock file path for a target library root.
 func LockPath(targetPath string) string {
-	return filepath.Join(targetPath, ".photolib", LockFileName)
+	return filepath.Join(targetPath, ".qsync", LockFileName)
 }
 
 // Acquire opens and non-blocking-locks the lock file for the target path,

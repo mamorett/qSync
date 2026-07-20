@@ -209,15 +209,15 @@ func DiscoverConfigPath(flagPath string) string {
 	if flagPath != "" {
 		return flagPath
 	}
-	if p := os.Getenv("PHOTOLIB_CONFIG"); p != "" {
+	if p := os.Getenv("QSYNC_CONFIG"); p != "" {
 		return p
 	}
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		home, _ := os.UserHomeDir()
-		return filepath.Join(home, ".config", "photolib", "config.yaml")
+		return filepath.Join(home, ".config", "qsync", "config.yaml")
 	}
-	return filepath.Join(configDir, "photolib", "config.yaml")
+	return filepath.Join(configDir, "qsync", "config.yaml")
 }
 
 // ExpandPath is exported for callers that need ~ expansion (e.g. init).

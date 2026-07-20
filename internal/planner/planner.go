@@ -3,7 +3,7 @@ package planner
 import (
 	"sort"
 
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // Direction is the direction of a sync operation.

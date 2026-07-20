@@ -1,4 +1,4 @@
-module github.com/yourorg/photolib
+module github.com/yourorg/qsync
 
 go 1.22
 

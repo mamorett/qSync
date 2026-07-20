@@ -3,8 +3,8 @@ package conflict
 import (
 	"sort"
 
-	"github.com/yourorg/photolib/internal/planner"
-	"github.com/yourorg/photolib/internal/snapshot"
+	"github.com/yourorg/qsync/internal/planner"
+	"github.com/yourorg/qsync/internal/snapshot"
 )
 
 // entryDiffers reports whether two entries differ in existence/size/mtime/type.
