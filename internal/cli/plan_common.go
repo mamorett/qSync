@@ -21,7 +21,7 @@ type buildContext struct {
 // gatherAndPlan performs: local scan → fetch remote manifest → load synced →
 // conflict detection → build plan → persist local/remote manifests. It returns
 // scan errors separately so callers can decide severity.
-func gatherAndPlan(cfg *config.Config, direction planner.Direction) (*buildContext, []snapshot.ScanError, error) {
+func gatherAndPlan(cfg *config.Config, direction planner.Direction, vfat bool) (*buildContext, []snapshot.ScanError, error) {
 	res, err := snapshot.Scan(cfg.Target.Path, cfg.Ignore)
 	if err != nil {
 		return nil, nil, err
@@ -47,8 +47,8 @@ func gatherAndPlan(cfg *config.Config, direction planner.Direction) (*buildConte
 		return nil, res.Errors, fmt.Errorf("save remote manifest: %w", err)
 	}
 
-	conflicts := conflict.Detect(synced, local, remote)
-	plan := planner.Build(direction, synced, local, remote, conflicts)
+	conflicts := conflict.DetectVFAT(synced, local, remote, vfat)
+	plan := planner.BuildVFAT(direction, synced, local, remote, conflicts, vfat)
 	src, dst := rsyncx.Describe(direction, cfg)
 	plan.Source, plan.Dest = src, dst
 

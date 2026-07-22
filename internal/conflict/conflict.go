@@ -1,16 +1,39 @@
 package conflict
 
 import (
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/yourorg/qsync/internal/planner"
 	"github.com/yourorg/qsync/internal/snapshot"
 )
 
+func mtimeEqual(t1, t2 int64, vfat bool) bool {
+	if t1 == t2 {
+		return true
+	}
+	diff := t1 - t2
+	if diff < 0 {
+		diff = -diff
+	}
+	if vfat {
+		// 2-second VFAT resolution window
+		if diff <= 2 {
+			return true
+		}
+		// FAT32/exFAT local-time vs UTC timezone offsets (1h=3600s, 2h=7200s ± 2s)
+		if (diff >= 3598 && diff <= 3602) || (diff >= 7198 && diff <= 7202) {
+			return true
+		}
+	}
+	return false
+}
+
 // entryDiffers reports whether two entries differ in existence/size/mtime/type.
 // Mode is ignored (mode-only changes are updates, not conflicts). Hash is
 // ignored (only verify --checksum uses hashes).
-func entryDiffers(a, aOK bool, ae snapshot.Entry, b, bOK bool, be snapshot.Entry) bool {
+func entryDiffers(a, aOK bool, ae snapshot.Entry, b, bOK bool, be snapshot.Entry, vfat bool) bool {
 	if aOK != bOK {
 		return true
 	}
@@ -26,16 +49,17 @@ func entryDiffers(a, aOK bool, ae snapshot.Entry, b, bOK bool, be snapshot.Entry
 	if ae.Type == snapshot.TypeDir {
 		return false
 	}
-	return ae.Size != be.Size || ae.ModTime != be.ModTime
+	return ae.Size != be.Size || !mtimeEqual(ae.ModTime, be.ModTime, vfat)
 }
 
 // Detect performs three-way conflict detection between the synced ancestor,
 // local, and remote manifests. It returns conflicts sorted by path.
-//
-// First-run special case: if synced is nil or empty, the ancestor is treated as
-// empty, so any path existing on both sides with differing content is a
-// conflict.
 func Detect(synced, local, remote *snapshot.Manifest) []planner.Conflict {
+	return DetectVFAT(synced, local, remote, false)
+}
+
+// DetectVFAT performs three-way conflict detection with optional VFAT 2-second timestamp tolerance.
+func DetectVFAT(synced, local, remote *snapshot.Manifest, vfat bool) []planner.Conflict {
 	syncedEntries := map[string]snapshot.Entry{}
 	if synced != nil {
 		syncedEntries = synced.Entries
@@ -59,8 +83,8 @@ func Detect(synced, local, remote *snapshot.Manifest) []planner.Conflict {
 		le, lOK := local.Entries[p]
 		re, rOK := remote.Entries[p]
 
-		localChanged := entryDiffers(sOK, sOK, se, lOK, lOK, le)
-		remoteChanged := entryDiffers(sOK, sOK, se, rOK, rOK, re)
+		localChanged := entryDiffers(sOK, sOK, se, lOK, lOK, le, vfat)
+		remoteChanged := entryDiffers(sOK, sOK, se, rOK, rOK, re, vfat)
 
 		if !localChanged && !remoteChanged {
 			continue
@@ -86,7 +110,7 @@ func Detect(synced, local, remote *snapshot.Manifest) []planner.Conflict {
 		// Rule 1: both changed and both still present.
 		if localChanged && remoteChanged && lOK && rOK {
 			// Convergent change: identical result on both sides => no-op.
-			if convergent(le, re) {
+			if convergent(le, re, vfat) {
 				continue
 			}
 			conflicts = append(conflicts, mkConflict(p, le, re, lOK, rOK, "both sides modified"))
@@ -103,7 +127,7 @@ func Detect(synced, local, remote *snapshot.Manifest) []planner.Conflict {
 // convergent reports whether two entries represent the same content
 // (same size and mtime, same type). A file-vs-directory collision is never
 // convergent.
-func convergent(a, b snapshot.Entry) bool {
+func convergent(a, b snapshot.Entry, vfat bool) bool {
 	if a.Type != b.Type {
 		return false
 	}
@@ -113,10 +137,26 @@ func convergent(a, b snapshot.Entry) bool {
 	if a.Type == snapshot.TypeDir {
 		return true
 	}
-	return a.Size == b.Size && a.ModTime == b.ModTime
+	return a.Size == b.Size && mtimeEqual(a.ModTime, b.ModTime, vfat)
 }
 
-func mkConflict(path string, le, re snapshot.Entry, lOK, rOK bool, detail string) planner.Conflict {
+func mkConflict(path string, le, re snapshot.Entry, lOK, rOK bool, baseDetail string) planner.Conflict {
+	detail := baseDetail
+	if lOK && rOK {
+		if le.Type != re.Type {
+			detail = fmt.Sprintf("%s (type: local=%v, remote=%v)", baseDetail, le.Type, re.Type)
+		} else if le.Size != re.Size {
+			detail = fmt.Sprintf("%s (size: local=%d, remote=%d)", baseDetail, le.Size, re.Size)
+		} else if le.ModTime != re.ModTime {
+			diff := le.ModTime - re.ModTime
+			if diff < 0 {
+				diff = -diff
+			}
+			lStr := time.Unix(le.ModTime, 0).UTC().Format("15:04:05")
+			rStr := time.Unix(re.ModTime, 0).UTC().Format("15:04:05")
+			detail = fmt.Sprintf("%s (mtime diff %ds: local=%s, remote=%s)", baseDetail, diff, lStr, rStr)
+		}
+	}
 	c := planner.Conflict{Path: path, Detail: detail}
 	if lOK {
 		c.LocalMtime = le.ModTime

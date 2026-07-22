@@ -13,12 +13,14 @@ import (
 
 // Config is the root of config.yaml.
 type Config struct {
-	Source    SourceConfig    `yaml:"source"`
-	Target    TargetConfig    `yaml:"target"`
-	Transport TransportConfig `yaml:"transport"`
-	Defaults  DefaultsConfig  `yaml:"defaults"`
-	Ignore    []string        `yaml:"ignore,omitempty"`
-	Rsync     RsyncConfig     `yaml:"rsync,omitempty"`
+	Source       SourceConfig    `yaml:"source"`
+	Target       TargetConfig    `yaml:"target"`
+	Transport    TransportConfig `yaml:"transport"`
+	Defaults     DefaultsConfig  `yaml:"defaults"`
+	Ignore       []string        `yaml:"ignore,omitempty"`
+	Rsync        RsyncConfig     `yaml:"rsync,omitempty"`
+	VFAT         bool            `yaml:"vfat,omitempty"`
+	ModifyWindow int             `yaml:"modify_window,omitempty"`
 }
 
 type SourceConfig struct {
@@ -39,29 +41,64 @@ type TransportConfig struct {
 // DefaultsConfig holds default behavior toggles. DryRun defaults to true when
 // absent from the YAML (implemented via a *bool that we normalize in Load).
 type DefaultsConfig struct {
-	DryRun bool `yaml:"dry_run"`
+	DryRun       bool `yaml:"dry_run"`
+	VFAT         bool `yaml:"vfat,omitempty"`
+	ModifyWindow int  `yaml:"modify_window,omitempty"`
 }
 
 // defaultsRaw mirrors DefaultsConfig but keeps DryRun optional so we can detect
 // absence and default it to true.
 type defaultsRaw struct {
-	DryRun *bool `yaml:"dry_run"`
+	DryRun       *bool `yaml:"dry_run"`
+	VFAT         *bool `yaml:"vfat,omitempty"`
+	ModifyWindow *int  `yaml:"modify_window,omitempty"`
 }
 
 type RsyncConfig struct {
 	ExtraArgs        []string `yaml:"extra_args,omitempty"`
 	BandwidthLimitKB int      `yaml:"bwlimit_kb,omitempty"`
+	VFAT             bool     `yaml:"vfat,omitempty"`
+	ModifyWindow     int      `yaml:"modify_window,omitempty"`
 }
 
 // configRaw is the wire form used for decoding so that DryRun absence is
 // detectable.
 type configRaw struct {
-	Source    SourceConfig    `yaml:"source"`
-	Target    TargetConfig    `yaml:"target"`
-	Transport TransportConfig `yaml:"transport"`
-	Defaults  defaultsRaw     `yaml:"defaults"`
-	Ignore    []string        `yaml:"ignore,omitempty"`
-	Rsync     RsyncConfig     `yaml:"rsync,omitempty"`
+	Source       SourceConfig    `yaml:"source"`
+	Target       TargetConfig    `yaml:"target"`
+	Transport    TransportConfig `yaml:"transport"`
+	Defaults     defaultsRaw     `yaml:"defaults"`
+	Ignore       []string        `yaml:"ignore,omitempty"`
+	Rsync        RsyncConfig     `yaml:"rsync,omitempty"`
+	VFAT         *bool           `yaml:"vfat,omitempty"`
+	ModifyWindow *int            `yaml:"modify_window,omitempty"`
+}
+
+// DefaultIgnore contains common system noise patterns ignored by default.
+var DefaultIgnore = []string{
+	".DS_Store",
+	"._*",
+	"Thumbs.db",
+	"*.tmp",
+	"@eaDir",
+}
+
+func mergeIgnore(defaults, user []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, p := range defaults {
+		if !seen[p] {
+			seen[p] = true
+			result = append(result, p)
+		}
+	}
+	for _, p := range user {
+		if !seen[p] {
+			seen[p] = true
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // Load reads YAML from path, expands ~ in paths, applies defaults, and
@@ -84,7 +121,7 @@ func Load(path string) (*Config, error) {
 		Source:    raw.Source,
 		Target:    raw.Target,
 		Transport: raw.Transport,
-		Ignore:    raw.Ignore,
+		Ignore:    mergeIgnore(DefaultIgnore, raw.Ignore),
 		Rsync:     raw.Rsync,
 	}
 	// DryRun defaults to true when absent.
@@ -92,6 +129,24 @@ func Load(path string) (*Config, error) {
 		cfg.Defaults.DryRun = true
 	} else {
 		cfg.Defaults.DryRun = *raw.Defaults.DryRun
+	}
+	// Normalize VFAT from root, defaults, or rsync sections.
+	if raw.VFAT != nil && *raw.VFAT {
+		cfg.Defaults.VFAT = true
+	}
+	if raw.Defaults.VFAT != nil && *raw.Defaults.VFAT {
+		cfg.Defaults.VFAT = true
+	}
+	if raw.Rsync.VFAT {
+		cfg.Defaults.VFAT = true
+	}
+	// Normalize ModifyWindow.
+	if raw.ModifyWindow != nil {
+		cfg.Defaults.ModifyWindow = *raw.ModifyWindow
+	} else if raw.Defaults.ModifyWindow != nil {
+		cfg.Defaults.ModifyWindow = *raw.Defaults.ModifyWindow
+	} else if raw.Rsync.ModifyWindow > 0 {
+		cfg.Defaults.ModifyWindow = raw.Rsync.ModifyWindow
 	}
 
 	cfg.Target.Path = expandPath(cfg.Target.Path)
@@ -185,6 +240,7 @@ func Default() *Config {
 		},
 		Transport: TransportConfig{},
 		Defaults:  DefaultsConfig{DryRun: true},
+		Ignore:    append([]string{}, DefaultIgnore...),
 		Rsync:     RsyncConfig{},
 	}
 }

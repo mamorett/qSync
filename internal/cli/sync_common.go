@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,6 +27,7 @@ type syncOptions struct {
 	all       bool
 	waitLock  time.Duration
 	delete    bool
+	vfat      bool
 }
 
 // runSync executes the shared pull/push flow.
@@ -34,6 +37,8 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 	if err != nil {
 		return exitcode.GenericError, err
 	}
+
+	effectiveVFAT := opts.vfat || cfg.Defaults.VFAT
 
 	// Acquire lock (held for the entire operation incl. planning).
 	lk, err := acquireWithWait(cfg.Target.Path, opname, opts.waitLock)
@@ -69,7 +74,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		defer aw.Close()
 	}
 
-	bc, scanErrs, err := gatherAndPlan(cfg, opts.direction)
+	bc, scanErrs, err := gatherAndPlan(cfg, opts.direction, effectiveVFAT)
 	if err != nil {
 		writeAuditSummary(aw, opname, opts.apply, nil, 1, "error: "+err.Error(), start)
 		return exitcode.GenericError, err
@@ -97,7 +102,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 
 	// Push Safety Rule 4: refuse if the DGX has newer changes the local lacks.
 	if opts.direction == planner.DirectionPush {
-		if violated := remoteHasNewerChanges(bc); violated {
+		if violated := remoteHasNewerChanges(bc, effectiveVFAT); violated {
 			msg := "DGX has newer changes; run qsync pull first"
 			writeAuditSummary(aw, opname, opts.apply, plan, 0, "conflicts", start)
 			if g.json {
@@ -108,7 +113,19 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		}
 	}
 
-	argv := rsyncx.BuildArgs(opts.direction, cfg, true, opts.delete)
+	var transferListPath string
+	if opts.apply {
+		var err error
+		transferListPath, err = writeTransferList(cfg.Target.Path, plan.Changes)
+		if err != nil {
+			return exitcode.GenericError, fmt.Errorf("write transfer list: %w", err)
+		}
+		if transferListPath != "" {
+			defer os.Remove(transferListPath)
+		}
+	}
+
+	argv := rsyncx.BuildArgsVFAT(opts.direction, cfg, true, opts.delete, effectiveVFAT, transferListPath)
 	binary := rsyncx.Binary(cfg)
 
 	// Dry-run path.
@@ -227,9 +244,28 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 	return exitcode.Success, nil
 }
 
+func mtimeEqual(t1, t2 int64, vfat bool) bool {
+	if t1 == t2 {
+		return true
+	}
+	diff := t1 - t2
+	if diff < 0 {
+		diff = -diff
+	}
+	if vfat {
+		if diff <= 2 {
+			return true
+		}
+		if (diff >= 3598 && diff <= 3602) || (diff >= 7198 && diff <= 7202) {
+			return true
+		}
+	}
+	return false
+}
+
 // entryDiffers reports whether two entries differ in existence-agnostic content
 // (type/size/mtime/link target). Mirrors the conflict package's semantics.
-func entryDiffers(a, b snapshot.Entry) bool {
+func entryDiffers(a, b snapshot.Entry, vfat bool) bool {
 	if a.Type != b.Type {
 		return true
 	}
@@ -239,21 +275,21 @@ func entryDiffers(a, b snapshot.Entry) bool {
 	if a.Type == snapshot.TypeDir {
 		return false
 	}
-	return a.Size != b.Size || a.ModTime != b.ModTime
+	return a.Size != b.Size || !mtimeEqual(a.ModTime, b.ModTime, vfat)
 }
 
 // remoteHasNewerChanges reports whether push should be blocked because the
 // remote has changes relative to the synced ancestor that local lacks.
-func remoteHasNewerChanges(bc *buildContext) bool {
+func remoteHasNewerChanges(bc *buildContext, vfat bool) bool {
 	// Any path where remote differs from synced but local does not match remote.
 	for p, re := range bc.remote.Entries {
 		se, sOK := bc.synced.Entries[p]
-		remoteChanged := !sOK || entryDiffers(se, re)
+		remoteChanged := !sOK || entryDiffers(se, re, vfat)
 		if !remoteChanged {
 			continue
 		}
 		le, lOK := bc.local.Entries[p]
-		if !lOK || entryDiffers(le, re) {
+		if !lOK || entryDiffers(le, re, vfat) {
 			return true
 		}
 	}
@@ -346,4 +382,32 @@ func joinArgs(argv []string) string {
 		out += a
 	}
 	return out
+}
+
+func writeTransferList(targetPath string, changes []planner.Change) (string, error) {
+	var lines []string
+	for _, c := range changes {
+		if c.Kind == planner.ChangeAdd || c.Kind == planner.ChangeUpdate {
+			lines = append(lines, c.Path)
+		}
+	}
+	if len(lines) == 0 {
+		return "", nil
+	}
+
+	tmpDir := filepath.Join(targetPath, ".qsync", "tmp")
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return "", err
+	}
+	f, err := os.CreateTemp(tmpDir, "transfer-*.txt")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	content := strings.Join(lines, "\n") + "\n"
+	if _, err := f.WriteString(content); err != nil {
+		return "", err
+	}
+	return f.Name(), nil
 }

@@ -15,9 +15,10 @@ func cmdPlan(e *env) (exitcode.ExitCode, error) {
 	}
 	fs, g := newFlagSet("plan", e)
 	var dir string
-	var all bool
+	var all, vfat bool
 	fs.StringVar(&dir, "direction", "pull", "pull|push")
 	fs.BoolVar(&all, "all", false, "list all changes (not just first 50)")
+	fs.BoolVar(&vfat, "vfat", false, "enable VFAT/exFAT mode (2-sec mtime window, suppress perms)")
 	if err := fs.Parse(e.args); err != nil {
 		return exitcode.GenericError, e.parseErr(commands["plan"], err)
 	}
@@ -32,6 +33,8 @@ func cmdPlan(e *env) (exitcode.ExitCode, error) {
 		return exitcode.GenericError, err
 	}
 
+	effectiveVFAT := vfat || cfg.Defaults.VFAT
+
 	// Refuse if a lock is held (plans during active sync are unreliable).
 	if held, info, _ := lock.IsLocked(cfg.Target.Path); held {
 		if g.json {
@@ -41,7 +44,7 @@ func cmdPlan(e *env) (exitcode.ExitCode, error) {
 		return exitcode.LockActive, ErrLockActive
 	}
 
-	bc, scanErrs, err := gatherAndPlan(cfg, direction)
+	bc, scanErrs, err := gatherAndPlan(cfg, direction, effectiveVFAT)
 	if err != nil {
 		return exitcode.GenericError, err
 	}

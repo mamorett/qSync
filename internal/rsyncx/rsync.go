@@ -20,11 +20,36 @@ const itemizeFormat = "%n|%i|%b|%l"
 //
 // SAFETY: this function never emits any --delete* flag unless deleteMode is true.
 func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool, deleteMode bool) []string {
-	args := []string{
-		"-avz",
-		"--numeric-ids",
-		"--no-perms",
-		"--chmod=ugo=rwX",
+	vfat := cfg != nil && cfg.Defaults.VFAT
+	return BuildArgsVFAT(direction, cfg, itemize, deleteMode, vfat, "")
+}
+
+// BuildArgsVFAT constructs the rsync argument vector with explicit VFAT options.
+func BuildArgsVFAT(direction planner.Direction, cfg *config.Config, itemize bool, deleteMode bool, vfat bool, filesFrom string) []string {
+	var args []string
+	if vfat {
+		modWindow := 3602
+		if cfg != nil && cfg.Defaults.ModifyWindow > 0 {
+			modWindow = cfg.Defaults.ModifyWindow
+		}
+		args = []string{
+			"-rltz",
+			"--numeric-ids",
+			"--no-perms",
+			"--no-owner",
+			"--no-group",
+			fmt.Sprintf("--modify-window=%d", modWindow),
+		}
+	} else {
+		args = []string{
+			"-avz",
+			"--numeric-ids",
+			"--no-perms",
+			"--chmod=ugo=rwX",
+		}
+		if cfg != nil && cfg.Defaults.ModifyWindow > 0 {
+			args = append(args, fmt.Sprintf("--modify-window=%d", cfg.Defaults.ModifyWindow))
+		}
 	}
 
 	if itemize {
@@ -39,6 +64,10 @@ func BuildArgs(direction planner.Direction, cfg *config.Config, itemize bool, de
 	args = append(args, "--exclude=.qsync/***")
 	for _, pat := range cfg.Ignore {
 		args = append(args, "--exclude="+pat)
+	}
+
+	if filesFrom != "" {
+		args = append(args, "--files-from="+filesFrom)
 	}
 
 	// SSH transport.

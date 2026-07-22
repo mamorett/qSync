@@ -137,6 +137,38 @@ func TestDiscoverConfigPath(t *testing.T) {
 	}
 }
 
+func TestLoad_DefaultIgnore(t *testing.T) {
+	p := writeCfg(t, `
+source:
+  host: dgx
+  path: /photos
+target:
+  path: /tmp/pics
+ignore:
+  - "custom_pattern.log"
+`)
+	cfg, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasDSStore := false
+	hasCustom := false
+	for _, pat := range cfg.Ignore {
+		if pat == ".DS_Store" {
+			hasDSStore = true
+		}
+		if pat == "custom_pattern.log" {
+			hasCustom = true
+		}
+	}
+	if !hasDSStore {
+		t.Error("expected default .DS_Store ignore pattern")
+	}
+	if !hasCustom {
+		t.Error("expected custom ignore pattern")
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && indexOf(s, sub) >= 0
 }

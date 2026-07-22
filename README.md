@@ -141,8 +141,9 @@ Compares the current files in target path with `.qsync/state/synced.manifest.jso
 - **Example**: `qsync status`
 
 ### `plan`
-Analyzes change direction.
+Analyzes change direction and checks for 3-way conflicts.
 - **Example (Incoming)**: `qsync plan --direction pull`
+- **Example (VFAT/VeraCrypt target)**: `qsync plan --direction pull --vfat`
 - **Example (Outgoing)**: `qsync plan --direction push --json`
 
 ### `verify`
@@ -153,11 +154,13 @@ Compares file size and mod times.
 ### `pull`
 Synchronizes remote changes down to local.
 - **Example (Dry-run)**: `qsync pull`
+- **Example (VFAT / VeraCrypt target)**: `qsync pull --vfat --apply`
 - **Example (Execution)**: `qsync pull --apply --wait-lock 2m`
 
 ### `push`
 Synchronizes local changes up to remote.
 - **Example (Dry-run)**: `qsync push`
+- **Example (VFAT / VeraCrypt target)**: `qsync push --vfat --apply`
 - **Example (Execution)**: `qsync push --apply`
 
 ### `purge`
@@ -191,6 +194,8 @@ transport:
 # Default client behavior flags
 defaults:
   dry_run: true           # If true, push/pull require --apply to modify files
+  vfat: true              # Enable VFAT/exFAT/VeraCrypt mode (2s mtime window, 1h/2h timezone tolerance, suppress perms)
+  modify_window: 2        # Custom mtime window in seconds (optional)
 
 # Optimization & tuning for rsync operations
 rsync:
@@ -199,7 +204,7 @@ rsync:
     - --copy-links
   bwlimit_kb: 5000        # Limit bandwidth to 5000 KB/s (0 = unlimited)
 
-# List of ignore glob patterns
+# Custom ignore glob patterns (merged with system defaults like .DS_Store)
 ignore:
   - Thumbs.db
   - "*.tmp"
@@ -211,7 +216,14 @@ ignore:
 
 ## 🚫 Ignore Patterns Syntax
 
-The `ignore:` list in `config.yaml` is highly optimized. It uses a subset of Gitignore syntax evaluated per path segment:
+System noise files are **automatically ignored by default** across all operations:
+- `.DS_Store`
+- `._*` (macOS AppleDouble metadata files)
+- `Thumbs.db`
+- `*.tmp`
+- `@eaDir` (Synology metadata directories)
+
+You can add additional custom patterns under the `ignore:` list in `config.yaml`. The ignore syntax uses a subset of Gitignore syntax evaluated per path segment:
 
 - **Literal Match**: `Thumbs.db` matches that exact file name anywhere in the library.
 - **Wildcard Glob**: `*.tmp` matches any file ending with `.tmp` in any folder.
@@ -230,8 +242,17 @@ A conflict occurs when a file has been modified on **both** the local machine an
 
 ### How qSync Handles Conflicts
 When qSync detects a conflict during `plan`, `pull`, or `push`:
-1. It exits with code `2` and displays a detailed list of conflict files.
-2. It refuses to transfer any files to prevent overriding either version.
+1. It exits with code `2` and displays a detailed list of conflict files with exact diagnostic details (e.g., `CONFLICT: both sides modified (mtime diff 3600s: local=19:04:05, remote=18:04:05)` or `size mismatch`).
+2. It refuses to transfer any files to prevent overwriting either version.
+
+### Syncing to FAT32 / exFAT / VeraCrypt Volumes (`--vfat`)
+When syncing to FAT32, exFAT, or VeraCrypt containers mounted on macOS, filesystems round timestamps to 2 seconds and store timestamps in Local Time (causing 1-hour or 2-hour UTC offsets). 
+
+Pass the `--vfat` flag (or set `vfat: true` in `config.yaml`):
+```bash
+qsync pull --vfat --apply
+```
+This enables a 2-second timestamp tolerance, handles 1h/2h FAT timezone shifts, suppresses permission warnings (`--no-owner --no-group`), and prevents false conflict reports.
 
 ### How to Resolve Conflicts Manually
 Because qSync is unidirectional, you must decide which side should win and align them before syncing again.

@@ -94,13 +94,32 @@ const (
 	reasonDeleteFmt = "deleted on "
 )
 
+func mtimeEqual(t1, t2 int64, vfat bool) bool {
+	if t1 == t2 {
+		return true
+	}
+	diff := t1 - t2
+	if diff < 0 {
+		diff = -diff
+	}
+	if vfat {
+		if diff <= 2 {
+			return true
+		}
+		if (diff >= 3598 && diff <= 3602) || (diff >= 7198 && diff <= 7202) {
+			return true
+		}
+	}
+	return false
+}
+
 // Build produces a Plan for the given direction from the three manifests.
-// Conflicts are detected first; even when present, the full plan is returned so
-// callers can display both. The executor is responsible for refusing to apply a
-// plan that has conflicts.
-//
-// ConflictFn is injected to avoid an import cycle with the conflict package.
 func Build(direction Direction, synced, local, remote *snapshot.Manifest, conflicts []Conflict) *Plan {
+	return BuildVFAT(direction, synced, local, remote, conflicts, false)
+}
+
+// BuildVFAT produces a Plan with optional VFAT 2-second timestamp tolerance.
+func BuildVFAT(direction Direction, synced, local, remote *snapshot.Manifest, conflicts []Conflict, vfat bool) *Plan {
 	var srcM, dstM *snapshot.Manifest
 	switch direction {
 	case DirectionPull:
@@ -142,7 +161,7 @@ func Build(direction Direction, synced, local, remote *snapshot.Manifest, confli
 			})
 			continue
 		}
-		reason, differs := diffReason(de, se)
+		reason, differs := diffReason(de, se, vfat)
 		if differs {
 			p.Changes = append(p.Changes, Change{
 				Path:    path,
@@ -199,7 +218,7 @@ func oppositeSide(src string) string {
 }
 
 // diffReason returns the reason a destination entry differs from a source entry.
-func diffReason(dst, src snapshot.Entry) (string, bool) {
+func diffReason(dst, src snapshot.Entry, vfat bool) (string, bool) {
 	if dst.Type != src.Type {
 		return ReasonType, true
 	}
@@ -215,7 +234,7 @@ func diffReason(dst, src snapshot.Entry) (string, bool) {
 	if dst.Size != src.Size {
 		return ReasonSize, true
 	}
-	if dst.ModTime != src.ModTime {
+	if !mtimeEqual(dst.ModTime, src.ModTime, vfat) {
 		return ReasonMtime, true
 	}
 	return "", false

@@ -1,6 +1,7 @@
 package conflict
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func TestDetect_BothModified(t *testing.T) {
 	l := mf(file("a", 2, 200)) // local changed
 	r := mf(file("a", 3, 300)) // remote changed differently
 	c := Detect(s, l, r)
-	if len(c) != 1 || c[0].Detail != "both sides modified" {
+	if len(c) != 1 || !strings.HasPrefix(c[0].Detail, "both sides modified") {
 		t.Fatalf("expected both-modified conflict, got %v", c)
 	}
 }
@@ -100,5 +101,20 @@ func TestDetect_FirstRunOneSidedIsClean(t *testing.T) {
 	r := mf() // only local
 	if c := Detect(nil, l, r); len(c) != 0 {
 		t.Fatalf("first-run one-sided path is a clean add, got %v", c)
+	}
+}
+
+func TestDetect_VFATTimestampTolerance(t *testing.T) {
+	l := mf(file("a", 100, 1000))
+	r := mf(file("a", 100, 1002)) // 2 seconds diff due to VFAT rounding
+
+	// Standard detect: conflict because 1000 != 1002
+	if c := Detect(nil, l, r); len(c) != 1 {
+		t.Fatalf("expected 1 conflict without VFAT mode, got %v", c)
+	}
+
+	// VFAT detect: tolerance <= 2 seconds -> no conflict
+	if c := DetectVFAT(nil, l, r, true); len(c) != 0 {
+		t.Fatalf("expected 0 conflicts with VFAT mode, got %v", c)
 	}
 }
