@@ -34,7 +34,7 @@ func cmdScan(e *env) (exitcode.ExitCode, error) {
 	}
 
 	// Load ignore patterns from config if available (best-effort).
-	var ignore []string
+	ignore := config.DefaultIgnore
 	if cfg, err := config.Load(config.DiscoverConfigPath(e.globals.config)); err == nil {
 		ignore = cfg.Ignore
 	}

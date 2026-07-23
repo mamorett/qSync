@@ -212,3 +212,29 @@ func treeHash(t *testing.T, root string) string {
 	})
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+func TestRun_ScanDefaultIgnore(t *testing.T) {
+	root := t.TempDir()
+	mkfile(t, filepath.Join(root, "keep.jpg"), "hello")
+	mkfile(t, filepath.Join(root, "sub/.DS_Store"), "dsstore")
+	mkfile(t, filepath.Join(root, "sub/._.DS_Store"), "apple_double")
+
+	// Run scan directly via CLI.Run, with config that doesn't exist
+	var out, errb bytes.Buffer
+	code := Run([]string{"scan", "--root", root}, &out, &errb)
+	if code != exitcode.Success {
+		t.Fatalf("scan exit = %d\nstdout=%s\nstderr=%s", code, out.String(), errb.String())
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "keep.jpg") {
+		t.Errorf("expected keep.jpg in manifest, got:\n%s", got)
+	}
+	if strings.Contains(got, ".DS_Store") {
+		t.Errorf(".DS_Store was not ignored:\n%s", got)
+	}
+	if strings.Contains(got, "._.DS_Store") {
+		t.Errorf("._.DS_Store was not ignored:\n%s", got)
+	}
+}
+

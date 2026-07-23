@@ -187,6 +187,7 @@ func versionString() string {
 // printTopUsage renders top-level help with grouped commands.
 func printTopUsage(w io.Writer) {
 	printLogo(w)
+	fmt.Fprintln(w)
 	fmt.Fprintln(w, "qSync — safe, deterministic photo library sync (rsync/ssh wrapper)")
 	fmt.Fprintln(w, "====================================================================")
 	fmt.Fprintln(w, "A safe unidirectional sync client ensuring safety first: no automatic deletions,")
