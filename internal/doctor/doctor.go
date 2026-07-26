@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/yourorg/qsync/internal/config"
@@ -61,7 +62,13 @@ func Run(cfgPath string, cfg *config.Config, cfgErr error) *Report {
 	}
 	add("config", true, false, cfgPath)
 
-	rsyncBin := binOrDefault(cfg.Transport.Rsync, "rsync")
+	defaultRsync := "rsync"
+	if runtime.GOOS == "darwin" {
+		if _, err := os.Stat("/opt/homebrew/bin/rsync"); err == nil {
+			defaultRsync = "/opt/homebrew/bin/rsync"
+		}
+	}
+	rsyncBin := binOrDefault(cfg.Transport.Rsync, defaultRsync)
 	sshBin := binOrDefault(cfg.Transport.SSH, "ssh")
 
 	// 2. rsync present + version.
@@ -69,7 +76,11 @@ func Run(cfgPath string, cfg *config.Config, cfgErr error) *Report {
 		add("rsync-binary", false, false, "not found: "+rsyncBin)
 	} else {
 		ver := firstLine(runCapture(path, "--version"))
-		add("rsync-binary", true, false, ver)
+		if runtime.GOOS == "darwin" && filepath.Clean(path) == "/usr/bin/rsync" {
+			add("rsync-binary", true, true, ver+" (warning: macOS system rsync in use; brew rsync is recommended)")
+		} else {
+			add("rsync-binary", true, false, ver)
+		}
 	}
 
 	// 3. ssh present.

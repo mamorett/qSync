@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -166,6 +167,21 @@ ignore:
 	}
 	if !hasCustom {
 		t.Error("expected custom ignore pattern")
+	}
+}
+
+func TestValidate_OSXRsyncAllowed(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS specific test")
+	}
+	c := &Config{
+		Source:    SourceConfig{Host: "h", Path: "/p"},
+		Target:    TargetConfig{Path: "/tmp/lib"},
+		Transport: TransportConfig{Rsync: "/usr/bin/rsync"},
+	}
+	err := c.Validate()
+	if err != nil {
+		t.Fatalf("expected validation success for /usr/bin/rsync fallback on macOS, got: %v", err)
 	}
 }
 

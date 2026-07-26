@@ -1,6 +1,7 @@
 package rsyncx
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 
@@ -128,13 +129,27 @@ func TestParseItemized(t *testing.T) {
 func TestBuildArgsVFAT(t *testing.T) {
 	args := BuildArgsVFAT(planner.DirectionPull, testCfg(), false, false, true, "")
 	joined := strings.Join(args, " ")
-	if !strings.Contains(joined, "-rltz") {
-		t.Errorf("expected -rltz in vfat args, got %s", joined)
+	if !strings.Contains(joined, "-rlt") {
+		t.Errorf("expected -rlt in vfat args, got %s", joined)
+	}
+	if strings.Contains(joined, "-rltz") || strings.Contains(joined, "-avz") {
+		t.Errorf("expected no -z option in args, got %s", joined)
 	}
 	if !strings.Contains(joined, "--modify-window=3602") {
 		t.Errorf("expected --modify-window=3602 in vfat args, got %s", joined)
 	}
 	if !strings.Contains(joined, "--no-owner") || !strings.Contains(joined, "--no-group") {
 		t.Errorf("expected permission suppression in vfat args, got %s", joined)
+	}
+}
+
+func TestBinary_Darwin(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS specific test")
+	}
+	cfg := &config.Config{}
+	got := Binary(cfg)
+	if got != "/opt/homebrew/bin/rsync" && got != "rsync" {
+		t.Errorf("Binary() = %q, want /opt/homebrew/bin/rsync or rsync fallback", got)
 	}
 }

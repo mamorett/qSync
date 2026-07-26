@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/yourorg/qsync/internal/config"
@@ -33,7 +35,7 @@ func BuildArgsVFAT(direction planner.Direction, cfg *config.Config, itemize bool
 			modWindow = cfg.Defaults.ModifyWindow
 		}
 		args = []string{
-			"-rltz",
+			"-rlt",
 			"--numeric-ids",
 			"--no-perms",
 			"--no-owner",
@@ -42,7 +44,7 @@ func BuildArgsVFAT(direction planner.Direction, cfg *config.Config, itemize bool
 		}
 	} else {
 		args = []string{
-			"-avz",
+			"-av",
 			"--numeric-ids",
 			"--no-perms",
 			"--chmod=ugo=rwX",
@@ -113,10 +115,16 @@ func Describe(direction planner.Direction, cfg *config.Config) (src, dst string)
 	return local, remote
 }
 
-// Binary returns the rsync binary path from config, defaulting to "rsync".
+// Binary returns the rsync binary path from config, defaulting to "rsync"
+// (or "/opt/homebrew/bin/rsync" on macOS if present).
 func Binary(cfg *config.Config) string {
-	if cfg.Transport.Rsync != "" {
+	if cfg != nil && cfg.Transport.Rsync != "" {
 		return cfg.Transport.Rsync
+	}
+	if runtime.GOOS == "darwin" {
+		if _, err := os.Stat("/opt/homebrew/bin/rsync"); err == nil {
+			return "/opt/homebrew/bin/rsync"
+		}
 	}
 	return "rsync"
 }

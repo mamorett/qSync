@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -204,26 +205,39 @@ func (c *Config) Validate() error {
 }
 
 // checkBinary verifies a transport binary is executable. If the configured
-// value is empty, it resolves the default name via exec.LookPath.
+// value is empty, it prefers /opt/homebrew/bin/rsync on macOS for rsync if present,
+// falling back to exec.LookPath.
 func checkBinary(name, configured string) error {
-	if configured == "" {
-		if _, err := exec.LookPath(name); err != nil {
-			return fmt.Errorf("%s binary not found in PATH; set transport.%s", name, name)
+	target := configured
+	if target == "" {
+		if name == "rsync" && runtime.GOOS == "darwin" {
+			if _, err := os.Stat("/opt/homebrew/bin/rsync"); err == nil {
+				target = "/opt/homebrew/bin/rsync"
+			}
 		}
-		return nil
-	}
-	if filepath.IsAbs(configured) {
-		fi, err := os.Stat(configured)
+		if target == "" {
+			var err error
+			target, err = exec.LookPath(name)
+			if err != nil {
+				return fmt.Errorf("%s binary not found in PATH; set transport.%s", name, name)
+			}
+		}
+	} else if !filepath.IsAbs(target) {
+		var err error
+		target, err = exec.LookPath(target)
 		if err != nil {
-			return fmt.Errorf("%s binary not accessible: %s", name, configured)
+			return fmt.Errorf("%s binary not found in PATH: %s", name, configured)
 		}
-		if fi.Mode()&0111 == 0 {
-			return fmt.Errorf("%s binary not executable: %s", name, configured)
-		}
-		return nil
 	}
-	if _, err := exec.LookPath(configured); err != nil {
-		return fmt.Errorf("%s binary not found in PATH: %s", name, configured)
+
+	target = filepath.Clean(target)
+
+	fi, err := os.Stat(target)
+	if err != nil {
+		return fmt.Errorf("%s binary not accessible: %s", name, target)
+	}
+	if fi.Mode()&0111 == 0 {
+		return fmt.Errorf("%s binary not executable: %s", name, target)
 	}
 	return nil
 }
