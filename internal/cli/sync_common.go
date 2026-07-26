@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"github.com/yourorg/qsync/internal/exitcode"
 	"github.com/yourorg/qsync/internal/lock"
 	"github.com/yourorg/qsync/internal/planner"
+	"github.com/yourorg/qsync/internal/progress"
 	"github.com/yourorg/qsync/internal/purge"
 	"github.com/yourorg/qsync/internal/rsyncx"
 	"github.com/yourorg/qsync/internal/snapshot"
@@ -55,7 +57,7 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 	defer lk.Release()
 
 	// Signal handler: release lock and exit 130 on interrupt.
-	sigCh := make(chan os.Signal, 1)
+	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -64,6 +66,12 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		select {
 		case <-sigCh:
 			cancel()
+			// If a second signal arrives, force exit immediately
+			select {
+			case <-sigCh:
+				os.Exit(130)
+			case <-time.After(3 * time.Second):
+			}
 		case <-ctx.Done():
 		}
 	}()
@@ -74,8 +82,11 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		defer aw.Close()
 	}
 
-	bc, scanErrs, err := gatherAndPlan(cfg, opts.direction, effectiveVFAT)
+	bc, scanErrs, err := gatherAndPlanContext(ctx, cfg, opts.direction, effectiveVFAT)
 	if err != nil {
+		if ctx.Err() != nil {
+			return exitcode.ExitCode(130), fmt.Errorf("interrupted")
+		}
 		writeAuditSummary(aw, opname, opts.apply, nil, 1, "error: "+err.Error(), start)
 		return exitcode.GenericError, err
 	}
@@ -166,9 +177,24 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		return exitcode.Success, nil
 	}
 
-	// Execute rsync. Both the child's stderr copy and our line parser write to
-	// stderr concurrently, so guard it with a single lock.
 	sw := newSyncWriter(e.stderr)
+
+	totalToTransfer := 0
+	for _, c := range plan.Changes {
+		if c.Kind == planner.ChangeAdd || c.Kind == planner.ChangeUpdate {
+			totalToTransfer++
+		}
+	}
+
+	var pb *progress.ProgressBar
+	if !g.json && !g.quiet {
+		opTitle := "Push"
+		if opts.direction == planner.DirectionPull {
+			opTitle = "Pull"
+		}
+		pb = progress.NewProgressBar(totalToTransfer, opTitle)
+	}
+
 	filesChanged := 0
 	onLine := func(line string) {
 		if ic, ok := rsyncx.ParseItemized(line); ok {
@@ -180,9 +206,16 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 					Result:    ic.ChangeType(),
 				})
 			}
-		}
-		if !g.json && !g.quiet {
-			fmt.Fprintln(sw, line)
+			if pb != nil {
+				srcPath := getSourcePath(cfg, opts.direction, ic.Path)
+				pb.UpdateCopy(ic.Path, srcPath)
+			}
+		} else if pb != nil && strings.TrimSpace(line) != "" {
+			if strings.HasPrefix(line, "rsync:") || strings.HasPrefix(line, "rsync error:") {
+				pb.UpdateError("", "", line)
+			} else {
+				pb.LogAbove(line)
+			}
 		}
 	}
 
@@ -190,7 +223,15 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		e.verbosef("rsync %s %s", binary, joinArgs(argv))
 	}
 
-	rc, runErr := rsyncx.Run(ctx, binary, argv, sw, onLine)
+	var rsyncStderr io.Writer = sw
+	if pb != nil {
+		rsyncStderr = &progressWriter{w: sw, pb: pb}
+	}
+
+	rc, runErr := rsyncx.Run(ctx, binary, argv, rsyncStderr, onLine)
+	if pb != nil {
+		pb.Finish()
+	}
 	if ctx.Err() != nil {
 		writeAuditSummaryArgv(aw, opname, false, plan, rc, "interrupted", start, argv, filesChanged, plan.Stats.BytesTotal)
 		return exitcode.ExitCode(130), fmt.Errorf("interrupted")
@@ -411,3 +452,28 @@ func writeTransferList(targetPath string, changes []planner.Change) (string, err
 	}
 	return f.Name(), nil
 }
+
+func getSourcePath(cfg *config.Config, direction planner.Direction, relPath string) string {
+	if direction == planner.DirectionPush {
+		return filepath.Join(cfg.Target.Path, relPath)
+	}
+	remPath := strings.TrimRight(cfg.Source.Path, "/") + "/" + relPath
+	if cfg.Source.Host != "" {
+		return cfg.Source.Host + ":" + remPath
+	}
+	return remPath
+}
+
+type progressWriter struct {
+	w  io.Writer
+	pb *progress.ProgressBar
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	if pw.pb != nil {
+		pw.pb.LogAbove(strings.TrimRight(string(p), "\r\n"))
+		return len(p), nil
+	}
+	return pw.w.Write(p)
+}
+

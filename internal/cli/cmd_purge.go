@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/yourorg/qsync/internal/audit"
@@ -14,6 +16,7 @@ import (
 	"github.com/yourorg/qsync/internal/exitcode"
 	"github.com/yourorg/qsync/internal/output"
 	"github.com/yourorg/qsync/internal/purge"
+	"github.com/yourorg/qsync/internal/rsyncx"
 	"github.com/yourorg/qsync/internal/snapshot"
 )
 
@@ -105,16 +108,33 @@ func cmdPurge(e *env) (exitcode.ExitCode, error) {
 		defer aw.Close()
 	}
 
-	ctx := context.Background()
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	defer signal.Stop(sigCh)
+	go func() {
+		select {
+		case <-sigCh:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	for _, c := range cmds {
 		args := c
 		if cfg.Transport.Port != 0 {
 			args = append([]string{"-p", fmt.Sprintf("%d", cfg.Transport.Port)}, c...)
 		}
 		cmd := exec.CommandContext(ctx, sshBin, args...)
+		rsyncx.ConfigurePGID(cmd)
 		cmd.Stdout = e.stderr
 		cmd.Stderr = e.stderr
 		if err := cmd.Run(); err != nil {
+			if ctx.Err() != nil {
+				writeAuditSummary(aw, "purge", false, nil, 1, "interrupted", start)
+				return exitcode.ExitCode(130), fmt.Errorf("interrupted")
+			}
 			writeAuditSummary(aw, "purge", false, nil, 1, "error: "+err.Error(), start)
 			return exitcode.GenericError, fmt.Errorf("remote delete failed: %w", err)
 		}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/yourorg/qsync/internal/config"
@@ -19,16 +20,19 @@ type buildContext struct {
 }
 
 // gatherAndPlan performs: local scan → fetch remote manifest → load synced →
-// conflict detection → build plan → persist local/remote manifests. It returns
-// scan errors separately so callers can decide severity.
+// conflict detection → build plan → persist local/remote manifests.
 func gatherAndPlan(cfg *config.Config, direction planner.Direction, vfat bool) (*buildContext, []snapshot.ScanError, error) {
+	return gatherAndPlanContext(context.Background(), cfg, direction, vfat)
+}
+
+func gatherAndPlanContext(ctx context.Context, cfg *config.Config, direction planner.Direction, vfat bool) (*buildContext, []snapshot.ScanError, error) {
 	res, err := snapshot.Scan(cfg.Target.Path, cfg.Ignore)
 	if err != nil {
 		return nil, nil, err
 	}
 	local := res.Manifest
 
-	remote, err := fetchRemoteManifest(cfg, false)
+	remote, err := fetchRemoteManifestContext(ctx, cfg, false)
 	if err != nil {
 		return nil, res.Errors, err
 	}

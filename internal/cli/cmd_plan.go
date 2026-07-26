@@ -1,7 +1,11 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/yourorg/qsync/internal/exitcode"
 	"github.com/yourorg/qsync/internal/lock"
@@ -44,8 +48,24 @@ func cmdPlan(e *env) (exitcode.ExitCode, error) {
 		return exitcode.LockActive, ErrLockActive
 	}
 
-	bc, scanErrs, err := gatherAndPlan(cfg, direction, effectiveVFAT)
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	defer signal.Stop(sigCh)
+	go func() {
+		select {
+		case <-sigCh:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	bc, scanErrs, err := gatherAndPlanContext(ctx, cfg, direction, effectiveVFAT)
 	if err != nil {
+		if ctx.Err() != nil {
+			return exitcode.ExitCode(130), fmt.Errorf("interrupted")
+		}
 		return exitcode.GenericError, err
 	}
 	for _, se := range scanErrs {

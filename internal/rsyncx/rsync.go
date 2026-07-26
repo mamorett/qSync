@@ -207,12 +207,18 @@ func Run(ctx context.Context, binary string, argv []string, stderrW io.Writer, o
 	sc := bufio.NewScanner(stdout)
 	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for sc.Scan() {
+		if ctx.Err() != nil {
+			break
+		}
 		if onLine != nil {
 			onLine(sc.Text())
 		}
 	}
 
 	waitErr := cmd.Wait()
+	if ctx.Err() != nil {
+		return 130, ctx.Err()
+	}
 	if waitErr == nil {
 		return 0, nil
 	}

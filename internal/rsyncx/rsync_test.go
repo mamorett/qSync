@@ -1,6 +1,7 @@
 package rsyncx
 
 import (
+	"context"
 	"runtime"
 	"strings"
 	"testing"
@@ -153,3 +154,17 @@ func TestBinary_Darwin(t *testing.T) {
 		t.Errorf("Binary() = %q, want /opt/homebrew/bin/rsync or rsync fallback", got)
 	}
 }
+
+func TestRun_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rc, err := Run(ctx, "sleep", []string{"10"}, nil, nil)
+	if rc != 130 && rc != 1 {
+		t.Errorf("expected exit code 130 or 1 on cancelled context, got %d", rc)
+	}
+	if err == nil {
+		t.Error("expected error on cancelled context")
+	}
+}
+
