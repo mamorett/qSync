@@ -238,3 +238,32 @@ func TestRun_ScanDefaultIgnore(t *testing.T) {
 	}
 }
 
+func TestPullApplyWithDelete(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test")
+	}
+	bin := buildTestBinary(t)
+	work := t.TempDir()
+	remote := filepath.Join(work, "remote")
+	local := filepath.Join(work, "local")
+	os.MkdirAll(local, 0755)
+
+	// Remote has only a.jpg
+	mkfile(t, filepath.Join(remote, "2024/a.jpg"), "hello")
+	// Local has a.jpg and extra.jpg (deleted on remote)
+	mkfile(t, filepath.Join(local, "2024/a.jpg"), "hello")
+	mkfile(t, filepath.Join(local, "2024/extra.jpg"), "to be deleted")
+
+	fakeSSH := writeFakeSSH(t, work, bin, remote)
+	cfgPath := writeConfig(t, work, remote, local, fakeSSH)
+
+	code, _, errb := run("pull", "--apply", "--delete", "--config", cfgPath)
+	if code != exitcode.Success {
+		t.Fatalf("pull --apply --delete exit = %d, want 0\n%s", code, errb)
+	}
+	if _, err := os.Stat(filepath.Join(local, "2024/extra.jpg")); !os.IsNotExist(err) {
+		t.Errorf("extra.jpg was not deleted by pull --apply --delete")
+	}
+}
+
+

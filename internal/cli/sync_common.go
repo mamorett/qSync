@@ -179,10 +179,14 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 
 	sw := newSyncWriter(e.stderr)
 
-	totalToTransfer := 0
+	shouldDeleteLocal := opts.direction == planner.DirectionPull && opts.delete
+
+	totalItems := 0
 	for _, c := range plan.Changes {
 		if c.Kind == planner.ChangeAdd || c.Kind == planner.ChangeUpdate {
-			totalToTransfer++
+			totalItems++
+		} else if c.Kind == planner.ChangeDelete && shouldDeleteLocal {
+			totalItems++
 		}
 	}
 
@@ -192,10 +196,38 @@ func runSync(e *env, opname string, opts syncOptions) (exitcode.ExitCode, error)
 		if opts.direction == planner.DirectionPull {
 			opTitle = "Pull"
 		}
-		pb = progress.NewProgressBar(totalToTransfer, opTitle)
+		pb = progress.NewProgressBar(totalItems, opTitle)
 	}
 
 	filesChanged := 0
+
+	// Handle local deletions for pull --apply --delete before or after transfer
+	if shouldDeleteLocal {
+		for _, c := range plan.Changes {
+			if c.Kind == planner.ChangeDelete {
+				localPath := filepath.Join(cfg.Target.Path, c.Path)
+				err := os.RemoveAll(localPath)
+				if err != nil && !os.IsNotExist(err) {
+					if pb != nil {
+						pb.UpdateError(c.Path, localPath, err.Error())
+					}
+				} else {
+					filesChanged++
+					if aw != nil {
+						_ = aw.Append(audit.Record{
+							Operation: opname,
+							Path:      c.Path,
+							Result:    "deleted",
+						})
+					}
+					if pb != nil {
+						pb.UpdateDelete(c.Path, localPath)
+					}
+				}
+			}
+		}
+	}
+
 	onLine := func(line string) {
 		if ic, ok := rsyncx.ParseItemized(line); ok {
 			filesChanged++

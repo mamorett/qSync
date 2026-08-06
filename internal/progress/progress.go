@@ -18,6 +18,7 @@ type ProgressBar struct {
 	total            int
 	current          int
 	copied           int
+	deleted          int
 	errors           int
 	description      string
 	currentFile      string
@@ -95,11 +96,11 @@ func (pb *ProgressBar) drawNoLock() {
 				srcDisplay = pb.currentFile
 			}
 			if srcDisplay != "" {
-				fmt.Printf("⚙ %s... %d%% (%d/%d) - Copying: %s - Status: %d copied, %d remaining, %d errors\n",
-					pb.description, pct, pb.current, pb.total, srcDisplay, pb.copied, remaining, pb.errors)
+				fmt.Printf("⚙ %s... %d%% (%d/%d) - Active: %s - Status: %d copied, %d deleted, %d remaining, %d errors\n",
+					pb.description, pct, pb.current, pb.total, srcDisplay, pb.copied, pb.deleted, remaining, pb.errors)
 			} else {
-				fmt.Printf("⚙ %s... %d%% (%d/%d) - Status: %d copied, %d remaining, %d errors\n",
-					pb.description, pct, pb.current, pb.total, pb.copied, remaining, pb.errors)
+				fmt.Printf("⚙ %s... %d%% (%d/%d) - Status: %d copied, %d deleted, %d remaining, %d errors\n",
+					pb.description, pct, pb.current, pb.total, pb.copied, pb.deleted, remaining, pb.errors)
 			}
 			pb.lastRedraw = time.Now()
 		}
@@ -217,7 +218,7 @@ func (pb *ProgressBar) drawNoLock() {
 		line1 += timeStr
 	}
 
-	// --- Line 2: Current File being copied with its source path ---
+	// --- Line 2: Current File being copied/deleted with its source path ---
 	maxLineLen := termWidth - 4
 	if maxLineLen < 20 {
 		maxLineLen = 20
@@ -231,7 +232,7 @@ func (pb *ProgressBar) drawNoLock() {
 		fileDisplay = "..."
 	}
 
-	line2Prefix := "Copying: "
+	line2Prefix := "Processing: "
 	avail := maxLineLen - len([]rune(line2Prefix))
 	if avail < 10 {
 		avail = 10
@@ -243,13 +244,13 @@ func (pb *ProgressBar) drawNoLock() {
 	}
 	line2 := "\033[36m" + line2Prefix + "\033[0m\033[37m" + truncatedSrc + "\033[0m"
 
-	// --- Line 3: Status (copied, remaining, errors) ---
+	// --- Line 3: Status (copied, deleted, remaining, errors) ---
 	errColor := "\033[32m"
 	if pb.errors > 0 {
 		errColor = "\033[31m"
 	}
-	line3 := fmt.Sprintf("\033[1mStatus:\033[0m \033[32m%d copied\033[0m | \033[33m%d remaining\033[0m | %s%d errors\033[0m",
-		pb.copied, remaining, errColor, pb.errors)
+	line3 := fmt.Sprintf("\033[1mStatus:\033[0m \033[32m%d copied\033[0m | \033[35m%d deleted\033[0m | \033[33m%d remaining\033[0m | %s%d errors\033[0m",
+		pb.copied, pb.deleted, remaining, errColor, pb.errors)
 
 	// Redraw 3 lines: clear line 1, print line 1 \n, clear line 2, print line 2 \n, clear line 3, print line 3, move cursor UP 2 lines
 	fmt.Printf("\r\033[2K%s\n\033[2K%s\n\033[2K%s\033[2A\r", line1, line2, line3)
@@ -269,7 +270,20 @@ func (pb *ProgressBar) UpdateCopy(relPath, srcPath string) {
 	}
 }
 
-// UpdateError records an error during copy
+// UpdateDelete records a successfully deleted file and increments progress
+func (pb *ProgressBar) UpdateDelete(relPath, srcPath string) {
+	pb.mu.Lock()
+	defer pb.mu.Unlock()
+	pb.currentFile = relPath
+	pb.currentSource = srcPath
+	pb.deleted++
+	pb.current++
+	if time.Since(pb.lastRedraw) >= pb.throttleDuration || pb.current == pb.total {
+		pb.drawNoLock()
+	}
+}
+
+// UpdateError records an error during copy/delete
 func (pb *ProgressBar) UpdateError(relPath, srcPath string, errStr string) {
 	pb.mu.Lock()
 	defer pb.mu.Unlock()
@@ -373,8 +387,8 @@ func (pb *ProgressBar) Finish() {
 		if pb.total > 0 {
 			pct = int(float64(pb.current) * 100 / float64(pb.total))
 		}
-		fmt.Printf("⚙ %s... %d%% (%d/%d) - Complete (Copied: %d, Remaining: %d, Errors: %d)\n",
-			pb.description, pct, pb.current, pb.total, pb.copied, remaining, pb.errors)
+		fmt.Printf("⚙ %s... %d%% (%d/%d) - Complete (Copied: %d, Deleted: %d, Remaining: %d, Errors: %d)\n",
+			pb.description, pct, pb.current, pb.total, pb.copied, pb.deleted, remaining, pb.errors)
 		return
 	}
 
