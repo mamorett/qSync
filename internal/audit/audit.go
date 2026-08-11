@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/yourorg/qsync/internal/planner"
+	"github.com/mamorett/PhotoLib/internal/planner"
 )
 
 // Record is one audit entry. A run writes one summary record followed by

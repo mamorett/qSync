@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/yourorg/qsync/internal/config"
-	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/config"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
 )
 
 func cmdInit(e *env) (exitcode.ExitCode, error) {

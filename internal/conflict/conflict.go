@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/yourorg/qsync/internal/planner"
-	"github.com/yourorg/qsync/internal/snapshot"
+	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/PhotoLib/internal/snapshot"
 )
 
 func mtimeEqual(t1, t2 int64, vfat bool) bool {

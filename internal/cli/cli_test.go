@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourorg/qsync/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
 )
 
 // buildTestBinary compiles the qsync binary once for integration tests that
@@ -20,7 +20,7 @@ import (
 func buildTestBinary(t *testing.T) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), "qsync")
-	cmd := exec.Command("go", "build", "-o", bin, "github.com/yourorg/qsync/cmd/qsync")
+	cmd := exec.Command("go", "build", "-o", bin, "github.com/mamorett/PhotoLib/cmd/qsync")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build test binary: %v\n%s", err, out)

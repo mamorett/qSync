@@ -11,15 +11,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yourorg/qsync/internal/audit"
-	"github.com/yourorg/qsync/internal/config"
-	"github.com/yourorg/qsync/internal/exitcode"
-	"github.com/yourorg/qsync/internal/lock"
-	"github.com/yourorg/qsync/internal/planner"
-	"github.com/yourorg/qsync/internal/progress"
-	"github.com/yourorg/qsync/internal/purge"
-	"github.com/yourorg/qsync/internal/rsyncx"
-	"github.com/yourorg/qsync/internal/snapshot"
+	"github.com/mamorett/PhotoLib/internal/audit"
+	"github.com/mamorett/PhotoLib/internal/config"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/lock"
+	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/PhotoLib/internal/progress"
+	"github.com/mamorett/PhotoLib/internal/purge"
+	"github.com/mamorett/PhotoLib/internal/rsyncx"
+	"github.com/mamorett/PhotoLib/internal/snapshot"
 )
 
 // syncOptions configure a pull/push run.

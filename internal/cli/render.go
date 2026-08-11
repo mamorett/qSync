@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/yourorg/qsync/internal/exitcode"
-	"github.com/yourorg/qsync/internal/output"
-	"github.com/yourorg/qsync/internal/planner"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/output"
+	"github.com/mamorett/PhotoLib/internal/planner"
 )
 
 // envelope is the standard JSON document for every command.

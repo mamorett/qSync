@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/yourorg/qsync/internal/cli"
+	"github.com/mamorett/PhotoLib/internal/cli"
 )
 
 // version is set at build time via -ldflags "-X main.version=...".

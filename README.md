@@ -4,6 +4,10 @@
   <img src="logo.png" alt="qSync logo" width="240">
 </p>
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mamorett/PhotoLib.svg)](https://pkg.go.dev/github.com/mamorett/PhotoLib)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-mamorett/PhotoLib-181717.svg)](https://github.com/mamorett/PhotoLib)
+
 A safe, deterministic unidirectional synchronization tool for file libraries (such as photos, documents, and media archives) built on `rsync` over SSH.
 
 ---
@@ -43,7 +47,7 @@ qSync is designed specifically for **valuable personal archives** where data los
 
 ### Install from Go package registry
 ```bash
-go install github.com/yourorg/qsync@latest
+go install github.com/mamorett/PhotoLib@latest
 ```
 
 ### Build from Source
@@ -150,6 +154,7 @@ Analyzes change direction and checks for 3-way conflicts.
 Compares file size and mod times.
 - **Example (Metadata check)**: `qsync verify`
 - **Example (Full SHA-256 validation)**: `qsync verify --checksum`
+- **When to use `--checksum`**: Use this flag to perform a full SHA-256 hash comparison instead of the default mtime/size check. This is recommended when file timestamps may be unreliable (e.g., FAT32/exFAT/VeraCrypt volumes, rsync partial transfers, or after system clock changes).
 
 ### `pull`
 Synchronizes remote changes down to local.
@@ -301,21 +306,20 @@ echo "Checking environment..."
 qsync doctor
 
 # Check if there are changes to pull
-if qsync plan --direction pull > /dev/null; then
-  echo "No remote changes to pull."
-else
-  # Exit code 5 indicates pending changes
-  echo "Pulling remote changes..."
-  qsync pull --apply
-fi
+case "$(qsync plan --direction pull; echo $?)" in
+  0) echo "No remote changes to pull." ;;
+  5) echo "Pulling remote changes..." ; qsync pull --apply ;;
+  2) echo "Conflicts detected - please resolve manually before syncing." ;;
+  *) echo "Error during plan check (exit code $?)." ;;
+esac
 
 # Check if there are changes to push
-if qsync plan --direction push > /dev/null; then
-  echo "No local changes to push."
-else
-  echo "Pushing local changes..."
-  qsync push --apply
-fi
+case "$(qsync plan --direction push; echo $?)" in
+  0) echo "No local changes to push." ;;
+  5) echo "Pushing local changes..." ; qsync push --apply ;;
+  2) echo "Conflicts detected - please resolve manually before syncing." ;;
+  *) echo "Error during plan check (exit code $?)." ;;
+esac
 
 # Finalize any staged deletions non-interactively
 qsync purge --yes
@@ -363,4 +367,15 @@ All state is stored within the local library target path inside the hidden `.qsy
 └── your_photos/
     ├── photo1.jpg
     └── photo2.jpg
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit pull requests, open issues, or suggest features. See the [LICENSE](LICENSE) for licensing details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ```

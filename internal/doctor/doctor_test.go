@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourorg/qsync/internal/config"
+	"github.com/mamorett/PhotoLib/internal/config"
 )
 
 func TestDoctor_OSXRsyncWarning(t *testing.T) {

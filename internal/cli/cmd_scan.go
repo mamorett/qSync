@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yourorg/qsync/internal/config"
-	"github.com/yourorg/qsync/internal/exitcode"
-	"github.com/yourorg/qsync/internal/snapshot"
+	"github.com/mamorett/PhotoLib/internal/config"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/snapshot"
 )
 
 // cmdScan is a hidden subcommand: scans a root and writes a JSONL manifest to

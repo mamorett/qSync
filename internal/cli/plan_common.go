@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/yourorg/qsync/internal/config"
-	"github.com/yourorg/qsync/internal/conflict"
-	"github.com/yourorg/qsync/internal/planner"
-	"github.com/yourorg/qsync/internal/rsyncx"
-	"github.com/yourorg/qsync/internal/snapshot"
+	"github.com/mamorett/PhotoLib/internal/config"
+	"github.com/mamorett/PhotoLib/internal/conflict"
+	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/PhotoLib/internal/rsyncx"
+	"github.com/mamorett/PhotoLib/internal/snapshot"
 )
 
 // buildContext holds the manifests gathered for planning.

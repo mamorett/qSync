@@ -3,10 +3,10 @@ package cli
 import (
 	"fmt"
 
-	"github.com/yourorg/qsync/internal/exitcode"
-	"github.com/yourorg/qsync/internal/lock"
-	"github.com/yourorg/qsync/internal/snapshot"
-	"github.com/yourorg/qsync/internal/verify"
+	"github.com/mamorett/PhotoLib/internal/exitcode"
+	"github.com/mamorett/PhotoLib/internal/lock"
+	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/PhotoLib/internal/verify"
 )
 
 func cmdVerify(e *env) (exitcode.ExitCode, error) {
