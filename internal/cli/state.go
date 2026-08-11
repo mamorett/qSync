@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/qsync/internal/snapshot"
 )
 
 // statePaths returns the manifest file paths for a target library root.

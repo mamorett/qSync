@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/rsyncx"
-	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/rsyncx"
+	"github.com/mamorett/qsync/internal/snapshot"
 )
 
 // fetchRemoteManifest runs `ssh <host> qsync scan --root <path>` and parses

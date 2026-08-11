@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/lock"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/lock"
 )
 
 // doctorMinFreeBytes is the free-space warning threshold (10 GiB).

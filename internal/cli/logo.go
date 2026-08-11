@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/blacktop/go-termimg"
-	"github.com/mamorett/PhotoLib/internal/output"
+	"github.com/mamorett/qsync/internal/output"
 )
 
 // Embedded PNG logo binary bytes

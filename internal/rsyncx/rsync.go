@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/planner"
 )
 
 // itemizeFormat is the --out-format used when itemizing changes.

@@ -11,13 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mamorett/PhotoLib/internal/audit"
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/exitcode"
-	"github.com/mamorett/PhotoLib/internal/output"
-	"github.com/mamorett/PhotoLib/internal/purge"
-	"github.com/mamorett/PhotoLib/internal/rsyncx"
-	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/qsync/internal/audit"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/exitcode"
+	"github.com/mamorett/qsync/internal/output"
+	"github.com/mamorett/qsync/internal/purge"
+	"github.com/mamorett/qsync/internal/rsyncx"
+	"github.com/mamorett/qsync/internal/snapshot"
 )
 
 // stdinReader is overridable in tests.

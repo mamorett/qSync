@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mamorett/PhotoLib/internal/exitcode"
-	"github.com/mamorett/PhotoLib/internal/lock"
-	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/qsync/internal/exitcode"
+	"github.com/mamorett/qsync/internal/lock"
+	"github.com/mamorett/qsync/internal/snapshot"
 )
 
 type statusData struct {

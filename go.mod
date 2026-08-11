@@ -1,4 +1,4 @@
-module github.com/mamorett/PhotoLib
+module github.com/mamorett/qsync
 
 go 1.26
 

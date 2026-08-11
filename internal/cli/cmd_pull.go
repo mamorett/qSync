@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mamorett/PhotoLib/internal/exitcode"
-	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/qsync/internal/exitcode"
+	"github.com/mamorett/qsync/internal/planner"
 )
 
 func cmdPull(e *env) (exitcode.ExitCode, error) {

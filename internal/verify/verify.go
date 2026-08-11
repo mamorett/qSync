@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/mamorett/PhotoLib/internal/snapshot"
+	"github.com/mamorett/qsync/internal/snapshot"
 )
 
 // Mismatch is one verification failure.

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/exitcode"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/exitcode"
 )
 
 // Version is set at build time via -ldflags "-X ...cli.Version=...".

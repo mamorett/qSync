@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mamorett/PhotoLib/internal/exitcode"
-	"github.com/mamorett/PhotoLib/internal/lock"
-	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/qsync/internal/exitcode"
+	"github.com/mamorett/qsync/internal/lock"
+	"github.com/mamorett/qsync/internal/planner"
 )
 
 func cmdPlan(e *env) (exitcode.ExitCode, error) {

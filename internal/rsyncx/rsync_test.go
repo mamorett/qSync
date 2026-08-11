@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mamorett/PhotoLib/internal/config"
-	"github.com/mamorett/PhotoLib/internal/planner"
+	"github.com/mamorett/qsync/internal/config"
+	"github.com/mamorett/qsync/internal/planner"
 )
 
 func testCfg() *config.Config {
