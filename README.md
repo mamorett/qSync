@@ -4,9 +4,9 @@
   <img src="logo.png" alt="qSync logo" width="240">
 </p>
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/mamorett/PhotoLib.svg)](https://pkg.go.dev/github.com/mamorett/PhotoLib)
+[![Go Reference](https://pkg.go.dev/badge/github.com/mamorett/qsync.svg)](https://pkg.go.dev/github.com/mamorett/qsync)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-mamorett/PhotoLib-181717.svg)](https://github.com/mamorett/PhotoLib)
+[![GitHub](https://img.shields.io/badge/GitHub-mamorett/qsync-181717.svg)](https://github.com/mamorett/qsync)
 
 A safe, deterministic unidirectional synchronization tool for file libraries (such as photos, documents, and media archives) built on `rsync` over SSH.
 
@@ -31,29 +31,29 @@ A safe, deterministic unidirectional synchronization tool for file libraries (su
 qSync is designed specifically for **valuable personal archives** where data loss is not an option. It enforces the following strict safety principles:
 
 1. **Dry-Run by Default**: Mutation operations (`pull`, `push`) do not modify anything unless you explicitly pass the `--apply` flag.
-2. **Never Delete Automatically**: qSync never passes `--delete` to rsync. Deleted local files are never automatically removed from the remote server. Instead, remote deletions are staged to a pending file and executed *only* when you run `qsync purge` and interactively confirm the deletion.
+2. **No Automatic Deletions**: By default, qSync never passes `--delete` to rsync. Deleted local files are never automatically removed from the remote server. Instead, remote deletions are staged to a pending file and executed *only* when you run `qsync purge` and confirm the deletion. Passing the explicit `--delete` flag to `pull`/`push` is an opt-in that makes rsync remove files on the destination that no longer exist on the source.
 3. **No Overwriting Conflicts**: If a file has been modified on both the local machine and the remote server since the last sync, qSync aborts the sync and registers a **three-way conflict**. You must resolve it manually before syncing can proceed.
 4. **No Push on Outdated State**: If the remote server contains newer updates that you haven't pulled yet, qSync refuses to push, preventing you from overwriting remote changes.
-5. **Advisory Synchronization Lock**: A flock-based lock (`sync.lock`) prevents multiple instances of qSync from running concurrently on the same target directory, preventing state corruption.
-6. **Immutable Audit Logs**: Every mutating operation (`--apply` or `purge`) appends a detailed JSONL log to `<target>/.qsync/history/` for complete auditability.
+5. **Advisory Synchronization Lock**: `pull` and `push` acquire an exclusive `flock` on `.qsync/sync.lock` for the duration of their run (with stale-PID takeover), so two syncs can't mutate the same target concurrently. `plan` and `verify` refuse to run while the lock is held (exit `3`), and `status` reports whether the lock is held.
+6. **Immutable Audit Logs**: Every `pull`/`push` run (dry-runs included, recorded with `dry_run: true`) and every `purge` appends a detailed JSONL log to `<target>/.qsync/history/` for complete auditability.
 
 ---
 
 ## 🚀 Quick Installation
 
 ### Prerequisites
-- **Local Machine**: macOS or Linux with Go (1.22+), `ssh`, and `rsync`.
+- **Local Machine**: macOS or Linux with Go (1.26+), `ssh`, and `rsync`.
 - **Remote Host**: Linux/Unix server with `ssh` access, `rsync` installed, and the `qsync` executable in the remote user's `PATH` (see [Remote Host Setup](#-remote-host-setup)).
 
 ### Install from Go package registry
 ```bash
-go install github.com/mamorett/PhotoLib@latest
+go install github.com/mamorett/qsync@latest
 ```
 
 ### Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourorg/qsync.git
+git clone https://github.com/mamorett/qsync.git
 cd qsync
 
 # Build the executable
@@ -125,8 +125,8 @@ qsync purge
 | **[`init`](#init)** | Setup | Create a configuration file and local state directories | `0` OK, `1` Error |
 | **[`doctor`](#doctor)** | Setup | Run environment diagnostics and connectivity checks | `0` OK, `1` Hard Failure |
 | **[`status`](#status)** | Inspect | Show local changes since last sync (fully offline) | `0` Clean, `5` Pending, `1` Error |
-| **[`plan`](#plan)** | Inspect | Compute pending changes (no mutation) | `0` Clean, `2` Conflict, `5` Pending, `1` Error |
-| **[`verify`](#verify)** | Inspect | Verify library integrity against remote | `0` Clean, `4` Mismatch, `1` Error |
+| **[`plan`](#plan)** | Inspect | Compute pending changes (no mutation) | `0` Clean, `2` Conflict, `3` Locked, `5` Pending, `1` Error |
+| **[`verify`](#verify)** | Inspect | Verify library integrity against remote | `0` Clean, `3` Locked, `4` Mismatch, `1` Error |
 | **[`pull`](#pull)** | Sync | Pull changes from remote (dry-run unless `--apply`) | `0` OK, `2` Conflict, `3` Locked, `5` Dry-run, `1` Error |
 | **[`push`](#push)** | Sync | Push changes to remote (dry-run unless `--apply`) | `0` OK, `2` Conflict, `3` Locked, `5` Dry-run, `1` Error |
 | **[`purge`](#purge)** | Sync | Execute staged deletions on remote (requires confirmation) | `0` OK, `1` Aborted/Error |
@@ -151,22 +151,25 @@ Analyzes change direction and checks for 3-way conflicts.
 - **Example (Outgoing)**: `qsync plan --direction push --json`
 
 ### `verify`
-Compares file size and mod times.
+Compares file size and mod times against the remote.
 - **Example (Metadata check)**: `qsync verify`
 - **Example (Full SHA-256 validation)**: `qsync verify --checksum`
-- **When to use `--checksum`**: Use this flag to perform a full SHA-256 hash comparison instead of the default mtime/size check. This is recommended when file timestamps may be unreliable (e.g., FAT32/exFAT/VeraCrypt volumes, rsync partial transfers, or after system clock changes).
+- **Example (List all mismatches)**: `qsync verify --all`
+- **When to use `--checksum`**: Performs a full SHA-256 hash comparison in addition to the size/mtime check. Useful for verifying integrity after a potentially interrupted transfer. Note that `verify` always compares mtime exactly (no VFAT tolerance is applied here); use `--vfat` on `pull`/`push`/`plan` instead when timestamps on FAT-formatted volumes are unreliable.
 
 ### `pull`
 Synchronizes remote changes down to local.
 - **Example (Dry-run)**: `qsync pull`
 - **Example (VFAT / VeraCrypt target)**: `qsync pull --vfat --apply`
 - **Example (Execution)**: `qsync pull --apply --wait-lock 2m`
+- **`--delete`**: Also delete local files that no longer exist on the remote (opt-in; off by default).
 
 ### `push`
 Synchronizes local changes up to remote.
 - **Example (Dry-run)**: `qsync push`
 - **Example (VFAT / VeraCrypt target)**: `qsync push --vfat --apply`
 - **Example (Execution)**: `qsync push --apply`
+- **`--delete`**: Immediately delete remote files that no longer exist locally, instead of staging them for `qsync purge` (opt-in; off by default).
 
 ### `purge`
 Triggers permanent deletions of remote files that were deleted locally.
@@ -177,7 +180,7 @@ Triggers permanent deletions of remote files that were deleted locally.
 
 ## ⚙️ Configuration Guide (`config.yaml`)
 
-By default, configuration is stored in `~/.config/qsync/config.yaml`. You can specify a custom configuration path using the global `--config` flag.
+By default, configuration is stored in the user config directory: `~/.config/qsync/config.yaml` on Linux and `~/Library/Application Support/qsync/config.yaml` on macOS. You can override the location with the global `--config` flag or the `QSYNC_CONFIG` environment variable.
 
 ### Full Configuration Example
 ```yaml
@@ -198,7 +201,7 @@ transport:
 
 # Default client behavior flags
 defaults:
-  dry_run: true           # If true, push/pull require --apply to modify files
+  dry_run: true           # Advisory. Mutating commands (pull/push) always require --apply to modify files
   vfat: true              # Enable VFAT/exFAT/VeraCrypt mode (2s mtime window, 1h/2h timezone tolerance, suppress perms)
   modify_window: 2        # Custom mtime window in seconds (optional)
 
@@ -294,6 +297,7 @@ Utilize these return codes in your scripting loops:
 - `3`: Locking failure (another sync is active)
 - `4`: Verification mismatch (`verify` command failed)
 - `5`: Pending changes detected (dry-run mode)
+- `130`: Interrupted by a signal (`SIGINT`/`SIGTERM`); any partial transfer is reported but state stays consistent
 
 ### Example Sync Cron Script
 ```bash
@@ -361,9 +365,10 @@ All state is stored within the local library target path inside the hidden `.qsy
 │   │   ├── remote.manifest.jsonl   # Manifest of last remote scan
 │   │   ├── synced.manifest.jsonl   # Manifest of last successful sync state
 │   │   └── pending-deletions.json  # Staged file deletions waiting for purge
-│   └── history/
-│       ├── 20260720-120000-pull.jsonl  # Append-only pull audit log
-│       └── 20260720-123000-push.jsonl  # Append-only push audit log
+│   ├── history/
+│   │   ├── 20260720-120000-pull.jsonl  # Append-only pull audit log
+│   │   └── 20260720-123000-push.jsonl  # Append-only push audit log
+│   └── tmp/                        # Scratch space (transfer lists, temp files)
 └── your_photos/
     ├── photo1.jpg
     └── photo2.jpg
